@@ -14,16 +14,588 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      audit_logs: {
+        Row: {
+          action: string
+          company_id: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          ip_address: string | null
+          new_values: Json | null
+          old_values: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          company_id: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          ip_address?: string | null
+          new_values?: Json | null
+          old_values?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          company_id?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          ip_address?: string | null
+          new_values?: Json | null
+          old_values?: Json | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      change_requests: {
+        Row: {
+          approved_at: string | null
+          approver_id: string | null
+          change_type: string | null
+          company_id: string
+          created_at: string
+          description: string | null
+          gxp_impact: boolean | null
+          id: string
+          implemented_at: string | null
+          priority: Database["public"]["Enums"]["risk_level"] | null
+          requester_id: string | null
+          status: Database["public"]["Enums"]["status_type"] | null
+          system_id: string | null
+          title: string
+          updated_at: string
+          validation_required: boolean | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approver_id?: string | null
+          change_type?: string | null
+          company_id: string
+          created_at?: string
+          description?: string | null
+          gxp_impact?: boolean | null
+          id?: string
+          implemented_at?: string | null
+          priority?: Database["public"]["Enums"]["risk_level"] | null
+          requester_id?: string | null
+          status?: Database["public"]["Enums"]["status_type"] | null
+          system_id?: string | null
+          title: string
+          updated_at?: string
+          validation_required?: boolean | null
+        }
+        Update: {
+          approved_at?: string | null
+          approver_id?: string | null
+          change_type?: string | null
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          gxp_impact?: boolean | null
+          id?: string
+          implemented_at?: string | null
+          priority?: Database["public"]["Enums"]["risk_level"] | null
+          requester_id?: string | null
+          status?: Database["public"]["Enums"]["status_type"] | null
+          system_id?: string | null
+          title?: string
+          updated_at?: string
+          validation_required?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "change_requests_approver_id_fkey"
+            columns: ["approver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_requests_requester_id_fkey"
+            columns: ["requester_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_requests_system_id_fkey"
+            columns: ["system_id"]
+            isOneToOne: false
+            referencedRelation: "systems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      companies: {
+        Row: {
+          cnpj: string | null
+          created_at: string
+          id: string
+          logo_url: string | null
+          name: string
+          settings: Json | null
+          updated_at: string
+        }
+        Insert: {
+          cnpj?: string | null
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          name: string
+          settings?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          cnpj?: string | null
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          name?: string
+          settings?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      documents: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          author_id: string | null
+          company_id: string
+          content: string | null
+          created_at: string
+          document_type: string
+          file_url: string | null
+          id: string
+          project_id: string | null
+          status: Database["public"]["Enums"]["status_type"] | null
+          system_id: string | null
+          title: string
+          updated_at: string
+          version: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          author_id?: string | null
+          company_id: string
+          content?: string | null
+          created_at?: string
+          document_type: string
+          file_url?: string | null
+          id?: string
+          project_id?: string | null
+          status?: Database["public"]["Enums"]["status_type"] | null
+          system_id?: string | null
+          title: string
+          updated_at?: string
+          version?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          author_id?: string | null
+          company_id?: string
+          content?: string | null
+          created_at?: string
+          document_type?: string
+          file_url?: string | null
+          id?: string
+          project_id?: string | null
+          status?: Database["public"]["Enums"]["status_type"] | null
+          system_id?: string | null
+          title?: string
+          updated_at?: string
+          version?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "validation_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_system_id_fkey"
+            columns: ["system_id"]
+            isOneToOne: false
+            referencedRelation: "systems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          company_id: string | null
+          created_at: string
+          department: string | null
+          email: string
+          full_name: string
+          id: string
+          is_active: boolean | null
+          position: string | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          company_id?: string | null
+          created_at?: string
+          department?: string | null
+          email: string
+          full_name: string
+          id: string
+          is_active?: boolean | null
+          position?: string | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          company_id?: string | null
+          created_at?: string
+          department?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          is_active?: boolean | null
+          position?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      risk_assessments: {
+        Row: {
+          assessment_type: string
+          assessor_id: string | null
+          company_id: string
+          controls: string | null
+          created_at: string
+          description: string | null
+          detectability: number | null
+          id: string
+          probability: number | null
+          residual_risk: Database["public"]["Enums"]["risk_level"] | null
+          risk_level: Database["public"]["Enums"]["risk_level"] | null
+          severity: number | null
+          status: Database["public"]["Enums"]["status_type"] | null
+          system_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assessment_type: string
+          assessor_id?: string | null
+          company_id: string
+          controls?: string | null
+          created_at?: string
+          description?: string | null
+          detectability?: number | null
+          id?: string
+          probability?: number | null
+          residual_risk?: Database["public"]["Enums"]["risk_level"] | null
+          risk_level?: Database["public"]["Enums"]["risk_level"] | null
+          severity?: number | null
+          status?: Database["public"]["Enums"]["status_type"] | null
+          system_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assessment_type?: string
+          assessor_id?: string | null
+          company_id?: string
+          controls?: string | null
+          created_at?: string
+          description?: string | null
+          detectability?: number | null
+          id?: string
+          probability?: number | null
+          residual_risk?: Database["public"]["Enums"]["risk_level"] | null
+          risk_level?: Database["public"]["Enums"]["risk_level"] | null
+          severity?: number | null
+          status?: Database["public"]["Enums"]["status_type"] | null
+          system_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_assessments_assessor_id_fkey"
+            columns: ["assessor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_assessments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_assessments_system_id_fkey"
+            columns: ["system_id"]
+            isOneToOne: false
+            referencedRelation: "systems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      systems: {
+        Row: {
+          company_id: string
+          created_at: string
+          criticality: Database["public"]["Enums"]["risk_level"] | null
+          data_integrity_impact: boolean | null
+          description: string | null
+          gamp_category: Database["public"]["Enums"]["gamp_category"]
+          gxp_impact: boolean | null
+          id: string
+          last_validation_date: string | null
+          name: string
+          next_revalidation_date: string | null
+          responsible_id: string | null
+          updated_at: string
+          validation_status:
+            | Database["public"]["Enums"]["validation_status"]
+            | null
+          vendor: string | null
+          version: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          criticality?: Database["public"]["Enums"]["risk_level"] | null
+          data_integrity_impact?: boolean | null
+          description?: string | null
+          gamp_category: Database["public"]["Enums"]["gamp_category"]
+          gxp_impact?: boolean | null
+          id?: string
+          last_validation_date?: string | null
+          name: string
+          next_revalidation_date?: string | null
+          responsible_id?: string | null
+          updated_at?: string
+          validation_status?:
+            | Database["public"]["Enums"]["validation_status"]
+            | null
+          vendor?: string | null
+          version?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          criticality?: Database["public"]["Enums"]["risk_level"] | null
+          data_integrity_impact?: boolean | null
+          description?: string | null
+          gamp_category?: Database["public"]["Enums"]["gamp_category"]
+          gxp_impact?: boolean | null
+          id?: string
+          last_validation_date?: string | null
+          name?: string
+          next_revalidation_date?: string | null
+          responsible_id?: string | null
+          updated_at?: string
+          validation_status?:
+            | Database["public"]["Enums"]["validation_status"]
+            | null
+          vendor?: string | null
+          version?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "systems_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "systems_responsible_id_fkey"
+            columns: ["responsible_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      validation_projects: {
+        Row: {
+          company_id: string
+          completion_date: string | null
+          created_at: string
+          description: string | null
+          id: string
+          manager_id: string | null
+          name: string
+          progress: number | null
+          project_type: string | null
+          start_date: string | null
+          status: Database["public"]["Enums"]["status_type"] | null
+          system_id: string | null
+          target_date: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          completion_date?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          manager_id?: string | null
+          name: string
+          progress?: number | null
+          project_type?: string | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["status_type"] | null
+          system_id?: string | null
+          target_date?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          completion_date?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          manager_id?: string | null
+          name?: string
+          progress?: number | null
+          project_type?: string | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["status_type"] | null
+          system_id?: string | null
+          target_date?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "validation_projects_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "validation_projects_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "validation_projects_system_id_fkey"
+            columns: ["system_id"]
+            isOneToOne: false
+            referencedRelation: "systems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_company_id: { Args: { _user_id: string }; Returns: string }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "super_admin" | "admin" | "validator" | "responsible" | "reader"
+      gamp_category: "1" | "3" | "4" | "5"
+      risk_level: "low" | "medium" | "high" | "critical"
+      status_type:
+        | "draft"
+        | "pending"
+        | "approved"
+        | "rejected"
+        | "completed"
+        | "cancelled"
+      validation_status:
+        | "not_started"
+        | "in_progress"
+        | "validated"
+        | "expired"
+        | "pending_revalidation"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +722,25 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["super_admin", "admin", "validator", "responsible", "reader"],
+      gamp_category: ["1", "3", "4", "5"],
+      risk_level: ["low", "medium", "high", "critical"],
+      status_type: [
+        "draft",
+        "pending",
+        "approved",
+        "rejected",
+        "completed",
+        "cancelled",
+      ],
+      validation_status: [
+        "not_started",
+        "in_progress",
+        "validated",
+        "expired",
+        "pending_revalidation",
+      ],
+    },
   },
 } as const
