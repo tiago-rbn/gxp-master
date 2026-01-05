@@ -31,6 +31,7 @@ import { useDocuments } from "@/hooks/useDocuments";
 import { DocumentFormDialog } from "@/components/documents/DocumentFormDialog";
 import { DocumentViewDialog } from "@/components/documents/DocumentViewDialog";
 import { DeleteDocumentDialog } from "@/components/documents/DeleteDocumentDialog";
+import { AIDocumentDialog } from "@/components/documents/AIDocumentDialog";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -68,7 +69,9 @@ export default function Documents() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isAIDialogOpen, setIsAIDialogOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+  const [aiGeneratedContent, setAiGeneratedContent] = useState<{ content: string; type: string } | null>(null);
 
   const { documents, isLoading, stats, createDocument, updateDocument, deleteDocument } =
     useDocuments();
@@ -163,7 +166,7 @@ export default function Documents() {
           onClick: handleCreate,
         }}
       >
-        <Button variant="outline" disabled>
+        <Button variant="outline" onClick={() => setIsAIDialogOpen(true)}>
           <Sparkles className="mr-2 h-4 w-4" />
           Gerar com IA
         </Button>
@@ -351,10 +354,14 @@ export default function Documents() {
       {/* Dialogs */}
       <DocumentFormDialog
         open={isFormOpen}
-        onOpenChange={setIsFormOpen}
+        onOpenChange={(open) => {
+          setIsFormOpen(open);
+          if (!open) setAiGeneratedContent(null);
+        }}
         document={selectedDocument}
         onSubmit={handleFormSubmit}
         isLoading={createDocument.isPending || updateDocument.isPending}
+        initialContent={aiGeneratedContent}
       />
 
       <DocumentViewDialog
@@ -370,6 +377,16 @@ export default function Documents() {
         documentTitle={selectedDocument?.title || ""}
         onConfirm={handleConfirmDelete}
         isLoading={deleteDocument.isPending}
+      />
+
+      <AIDocumentDialog
+        open={isAIDialogOpen}
+        onOpenChange={setIsAIDialogOpen}
+        onUseContent={(content, type) => {
+          setAiGeneratedContent({ content, type });
+          setSelectedDocument(null);
+          setIsFormOpen(true);
+        }}
       />
     </AppLayout>
   );
