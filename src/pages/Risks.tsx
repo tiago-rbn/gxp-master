@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, AlertTriangle } from "lucide-react";
+import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, Trash2, AlertTriangle, Loader2 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { StatusBadge } from "@/components/shared/StatusBadge";
 import { RiskIndicator } from "@/components/shared/RiskIndicator";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,78 +28,108 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { riskAssessments, type RiskAssessment } from "@/data/mockData";
+import { useRiskAssessments } from "@/hooks/useRiskAssessments";
+import { RiskFormDialog } from "@/components/risks/RiskFormDialog";
+import { RiskViewDialog } from "@/components/risks/RiskViewDialog";
+import { DeleteRiskDialog } from "@/components/risks/DeleteRiskDialog";
+import type { Database } from "@/integrations/supabase/types";
 
-// Risk Matrix Component
-function RiskMatrix({ probability, severity }: { probability: number; severity: number }) {
-  const cells = [];
-  for (let s = 3; s >= 1; s--) {
-    for (let p = 1; p <= 3; p++) {
-      const isActive = p === probability && s === severity;
-      const riskScore = p * s;
-      let color = "bg-success/20";
-      if (riskScore >= 6) color = "bg-risk-high/20";
-      else if (riskScore >= 3) color = "bg-risk-medium/20";
-      
-      cells.push(
-        <div
-          key={`${p}-${s}`}
-          className={`flex h-10 w-10 items-center justify-center rounded border ${color} ${
-            isActive ? "ring-2 ring-primary ring-offset-2" : ""
-          }`}
-        >
-          {isActive && <div className="h-4 w-4 rounded-full bg-primary" />}
-        </div>
-      );
-    }
-  }
+type RiskAssessment = Database["public"]["Tables"]["risk_assessments"]["Row"] & {
+  system?: { name: string } | null;
+  assessor?: { full_name: string } | null;
+};
 
-  return (
-    <div className="flex flex-col items-center gap-2">
-      <div className="grid grid-cols-3 gap-1">{cells}</div>
-      <div className="flex justify-between w-full text-xs text-muted-foreground mt-1">
-        <span>Baixa</span>
-        <span>Probabilidade</span>
-        <span>Alta</span>
-      </div>
-    </div>
-  );
-}
+const statusLabels: Record<string, string> = {
+  draft: "Rascunho",
+  pending: "Pendente",
+  approved: "Aprovado",
+  rejected: "Rejeitado",
+  completed: "Concluído",
+  cancelled: "Cancelado",
+};
+
+const riskLevelToOldFormat: Record<string, "High" | "Medium" | "Low"> = {
+  critical: "High",
+  high: "High",
+  medium: "Medium",
+  low: "Low",
+};
 
 export default function Risks() {
   const [searchTerm, setSearchTerm] = useState("");
   const [levelFilter, setLevelFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isViewOpen, setIsViewOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedRisk, setSelectedRisk] = useState<RiskAssessment | null>(null);
 
+  const {
+    riskAssessments,
+    isLoading,
+    stats,
+    createRiskAssessment,
+    updateRiskAssessment,
+    deleteRiskAssessment,
+  } = useRiskAssessments();
+
   const filteredRisks = riskAssessments.filter((risk) => {
-    const matchesSearch = risk.systemName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesLevel = levelFilter === "all" || risk.riskLevel === levelFilter;
-    const matchesType = typeFilter === "all" || risk.type === typeFilter;
+    const matchesSearch =
+      risk.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (risk.system?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
+    const matchesLevel = levelFilter === "all" || risk.risk_level === levelFilter;
+    const matchesType = typeFilter === "all" || risk.assessment_type === typeFilter;
     return matchesSearch && matchesLevel && matchesType;
   });
 
-  const riskStats = {
-    high: riskAssessments.filter(r => r.riskLevel === 'High').length,
-    medium: riskAssessments.filter(r => r.riskLevel === 'Medium').length,
-    low: riskAssessments.filter(r => r.riskLevel === 'Low').length,
-    open: riskAssessments.filter(r => r.status === 'Open').length,
+  const handleCreate = () => {
+    setSelectedRisk(null);
+    setIsFormOpen(true);
   };
 
-  const handleViewRisk = (risk: RiskAssessment) => {
+  const handleView = (risk: RiskAssessment) => {
     setSelectedRisk(risk);
-    setIsDialogOpen(true);
+    setIsViewOpen(true);
+  };
+
+  const handleEdit = (risk: RiskAssessment) => {
+    setSelectedRisk(risk);
+    setIsFormOpen(true);
+    setIsViewOpen(false);
+  };
+
+  const handleDelete = (risk: RiskAssessment) => {
+    setSelectedRisk(risk);
+    setIsDeleteOpen(true);
+  };
+
+  const handleFormSubmit = (values: any) => {
+    const payload = {
+      ...values,
+      system_id: values.system_id || null,
+      assessor_id: values.assessor_id || null,
+    };
+
+    if (selectedRisk) {
+      updateRiskAssessment.mutate(
+        { id: selectedRisk.id, ...payload },
+        { onSuccess: () => setIsFormOpen(false) }
+      );
+    } else {
+      createRiskAssessment.mutate(payload, { onSuccess: () => setIsFormOpen(false) });
+    }
+  };
+
+  const handleConfirmDelete = () => {
+    if (selectedRisk) {
+      deleteRiskAssessment.mutate(selectedRisk.id, {
+        onSuccess: () => {
+          setIsDeleteOpen(false);
+          setSelectedRisk(null);
+        },
+      });
+    }
   };
 
   return (
@@ -111,7 +140,7 @@ export default function Risks() {
         action={{
           label: "Nova Avaliação",
           icon: Plus,
-          onClick: () => {},
+          onClick: handleCreate,
         }}
       />
 
@@ -123,7 +152,7 @@ export default function Risks() {
               <AlertTriangle className="h-6 w-6 text-risk-high" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{riskStats.high}</p>
+              <p className="text-2xl font-bold">{stats.high}</p>
               <p className="text-sm text-muted-foreground">Riscos Altos</p>
             </div>
           </CardContent>
@@ -134,7 +163,7 @@ export default function Risks() {
               <AlertTriangle className="h-6 w-6 text-risk-medium" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{riskStats.medium}</p>
+              <p className="text-2xl font-bold">{stats.medium}</p>
               <p className="text-sm text-muted-foreground">Riscos Médios</p>
             </div>
           </CardContent>
@@ -145,7 +174,7 @@ export default function Risks() {
               <AlertTriangle className="h-6 w-6 text-risk-low" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{riskStats.low}</p>
+              <p className="text-2xl font-bold">{stats.low}</p>
               <p className="text-sm text-muted-foreground">Riscos Baixos</p>
             </div>
           </CardContent>
@@ -156,7 +185,7 @@ export default function Risks() {
               <AlertTriangle className="h-6 w-6 text-warning" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{riskStats.open}</p>
+              <p className="text-2xl font-bold">{stats.open}</p>
               <p className="text-sm text-muted-foreground">Em Aberto</p>
             </div>
           </CardContent>
@@ -170,7 +199,7 @@ export default function Risks() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Buscar por sistema..."
+                placeholder="Buscar por título ou sistema..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -186,6 +215,7 @@ export default function Risks() {
                   <SelectItem value="all">Todos Tipos</SelectItem>
                   <SelectItem value="IRA">IRA</SelectItem>
                   <SelectItem value="FRA">FRA</SelectItem>
+                  <SelectItem value="FMEA">FMEA</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={levelFilter} onValueChange={setLevelFilter}>
@@ -194,9 +224,10 @@ export default function Risks() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos Níveis</SelectItem>
-                  <SelectItem value="High">Alto</SelectItem>
-                  <SelectItem value="Medium">Médio</SelectItem>
-                  <SelectItem value="Low">Baixo</SelectItem>
+                  <SelectItem value="critical">Crítico</SelectItem>
+                  <SelectItem value="high">Alto</SelectItem>
+                  <SelectItem value="medium">Médio</SelectItem>
+                  <SelectItem value="low">Baixo</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -207,172 +238,139 @@ export default function Risks() {
       {/* Risk Table */}
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Sistema</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Nível de Risco</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Risco Residual</TableHead>
-                <TableHead>Data</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredRisks.map((risk) => (
-                <TableRow key={risk.id} className="cursor-pointer hover:bg-muted/50">
-                  <TableCell className="font-medium">{risk.systemName}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{risk.type}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <RiskIndicator level={risk.riskLevel} />
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge status={risk.status} />
-                  </TableCell>
-                  <TableCell>
-                    <RiskIndicator level={risk.residualRisk} size="sm" />
-                  </TableCell>
-                  <TableCell>{risk.createdAt}</TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleViewRisk(risk)}>
-                          <Eye className="mr-2 h-4 w-4" />
-                          Visualizar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Editar
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : filteredRisks.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <p className="text-muted-foreground mb-4">
+                {riskAssessments.length === 0
+                  ? "Nenhuma avaliação de risco cadastrada ainda."
+                  : "Nenhuma avaliação encontrada com os filtros aplicados."}
+              </p>
+              {riskAssessments.length === 0 && (
+                <Button onClick={handleCreate}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Criar Primeira Avaliação
+                </Button>
+              )}
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Título</TableHead>
+                  <TableHead>Sistema</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Nível de Risco</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Risco Residual</TableHead>
+                  <TableHead>Data</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredRisks.map((risk) => {
+                  const riskLevel = riskLevelToOldFormat[risk.risk_level || "low"];
+                  const residualLevel = riskLevelToOldFormat[risk.residual_risk || "low"];
+
+                  return (
+                    <TableRow
+                      key={risk.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleView(risk)}
+                    >
+                      <TableCell className="font-medium">{risk.title}</TableCell>
+                      <TableCell>{risk.system?.name || "-"}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{risk.assessment_type}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <RiskIndicator level={riskLevel} />
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {statusLabels[risk.status || "draft"]}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <RiskIndicator level={residualLevel} size="sm" />
+                      </TableCell>
+                      <TableCell>
+                        {new Date(risk.created_at).toLocaleDateString("pt-BR")}
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleView(risk);
+                              }}
+                            >
+                              <Eye className="mr-2 h-4 w-4" />
+                              Visualizar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEdit(risk);
+                              }}
+                            >
+                              <Edit className="mr-2 h-4 w-4" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(risk);
+                              }}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
-      {/* View Risk Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Avaliação de Risco - {selectedRisk?.systemName}</DialogTitle>
-            <DialogDescription>
-              {selectedRisk?.type === 'IRA' ? 'Avaliação de Risco Inicial' : 'Avaliação de Risco Funcional'}
-            </DialogDescription>
-          </DialogHeader>
-          {selectedRisk && (
-            <Tabs defaultValue="details" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="details">Detalhes</TabsTrigger>
-                <TabsTrigger value="matrix">Matriz de Risco</TabsTrigger>
-                <TabsTrigger value="controls">Controles</TabsTrigger>
-              </TabsList>
-              <TabsContent value="details" className="space-y-4 pt-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-muted-foreground">Impacto na Qualidade</Label>
-                    <p className="font-medium">{selectedRisk.qualityImpact} / 3</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Impacto no Paciente</Label>
-                    <p className="font-medium">{selectedRisk.patientImpact} / 3</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Impacto nos Dados</Label>
-                    <p className="font-medium">{selectedRisk.dataImpact} / 3</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Probabilidade</Label>
-                    <p className="font-medium">{selectedRisk.probability} / 3</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Severidade</Label>
-                    <p className="font-medium">{selectedRisk.severity} / 3</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Detectabilidade</Label>
-                    <p className="font-medium">{selectedRisk.detectability} / 3</p>
-                  </div>
-                </div>
-                <div className="flex gap-4 pt-4">
-                  <div>
-                    <Label className="text-muted-foreground">Nível de Risco</Label>
-                    <div className="mt-1">
-                      <RiskIndicator level={selectedRisk.riskLevel} size="lg" />
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Status</Label>
-                    <div className="mt-1">
-                      <StatusBadge status={selectedRisk.status} />
-                    </div>
-                  </div>
-                </div>
-              </TabsContent>
-              <TabsContent value="matrix" className="pt-4">
-                <div className="flex flex-col items-center gap-6">
-                  <Card className="p-6">
-                    <CardHeader className="p-0 pb-4">
-                      <CardTitle className="text-center text-lg">Matriz de Risco</CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                      <RiskMatrix 
-                        probability={selectedRisk.probability} 
-                        severity={selectedRisk.severity} 
-                      />
-                    </CardContent>
-                  </Card>
-                  <div className="flex gap-4 text-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="h-4 w-4 rounded bg-risk-low/20" />
-                      <span>Baixo</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="h-4 w-4 rounded bg-risk-medium/20" />
-                      <span>Médio</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="h-4 w-4 rounded bg-risk-high/20" />
-                      <span>Alto</span>
-                    </div>
-                  </div>
-                </div>
-              </TabsContent>
-              <TabsContent value="controls" className="space-y-4 pt-4">
-                <div>
-                  <Label className="text-muted-foreground">Controles Implementados</Label>
-                  <p className="mt-1 rounded-lg bg-muted p-3">{selectedRisk.controls}</p>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div>
-                    <Label className="text-muted-foreground">Risco Residual</Label>
-                    <div className="mt-1">
-                      <RiskIndicator level={selectedRisk.residualRisk} size="lg" />
-                    </div>
-                  </div>
-                </div>
-              </TabsContent>
-            </Tabs>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              Fechar
-            </Button>
-            <Button>Editar Avaliação</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Dialogs */}
+      <RiskFormDialog
+        open={isFormOpen}
+        onOpenChange={setIsFormOpen}
+        risk={selectedRisk}
+        onSubmit={handleFormSubmit}
+        isLoading={createRiskAssessment.isPending || updateRiskAssessment.isPending}
+      />
+
+      <RiskViewDialog
+        open={isViewOpen}
+        onOpenChange={setIsViewOpen}
+        risk={selectedRisk}
+        onEdit={() => selectedRisk && handleEdit(selectedRisk)}
+      />
+
+      <DeleteRiskDialog
+        open={isDeleteOpen}
+        onOpenChange={setIsDeleteOpen}
+        riskTitle={selectedRisk?.title || ""}
+        onConfirm={handleConfirmDelete}
+        isLoading={deleteRiskAssessment.isPending}
+      />
     </AppLayout>
   );
 }

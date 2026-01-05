@@ -1,0 +1,436 @@
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Slider } from "@/components/ui/slider";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useSystemsForSelect } from "@/hooks/useRiskAssessments";
+import { useProfiles } from "@/hooks/useSystems";
+import type { Database } from "@/integrations/supabase/types";
+
+type RiskAssessment = Database["public"]["Tables"]["risk_assessments"]["Row"];
+
+const riskSchema = z.object({
+  title: z.string().min(1, "Título é obrigatório"),
+  description: z.string().optional(),
+  assessment_type: z.string().min(1, "Tipo é obrigatório"),
+  system_id: z.string().optional(),
+  probability: z.number().min(1).max(10),
+  severity: z.number().min(1).max(10),
+  detectability: z.number().min(1).max(10),
+  risk_level: z.enum(["low", "medium", "high", "critical"]),
+  residual_risk: z.enum(["low", "medium", "high", "critical"]).optional(),
+  controls: z.string().optional(),
+  status: z.enum(["draft", "pending", "approved", "rejected", "completed", "cancelled"]),
+  assessor_id: z.string().optional(),
+});
+
+type RiskFormValues = z.infer<typeof riskSchema>;
+
+interface RiskFormDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  risk?: RiskAssessment | null;
+  onSubmit: (values: RiskFormValues) => void;
+  isLoading?: boolean;
+}
+
+function calculateRiskLevel(probability: number, severity: number, detectability: number): "low" | "medium" | "high" | "critical" {
+  const rpn = probability * severity * detectability;
+  if (rpn >= 500) return "critical";
+  if (rpn >= 200) return "high";
+  if (rpn >= 50) return "medium";
+  return "low";
+}
+
+export function RiskFormDialog({
+  open,
+  onOpenChange,
+  risk,
+  onSubmit,
+  isLoading,
+}: RiskFormDialogProps) {
+  const { data: systems = [] } = useSystemsForSelect();
+  const { data: profiles = [] } = useProfiles();
+
+  const form = useForm<RiskFormValues>({
+    resolver: zodResolver(riskSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      assessment_type: "IRA",
+      system_id: "",
+      probability: 5,
+      severity: 5,
+      detectability: 5,
+      risk_level: "medium",
+      residual_risk: "low",
+      controls: "",
+      status: "draft",
+      assessor_id: "",
+    },
+  });
+
+  const probability = form.watch("probability");
+  const severity = form.watch("severity");
+  const detectability = form.watch("detectability");
+
+  useEffect(() => {
+    const newRiskLevel = calculateRiskLevel(probability, severity, detectability);
+    form.setValue("risk_level", newRiskLevel);
+  }, [probability, severity, detectability, form]);
+
+  useEffect(() => {
+    if (risk) {
+      form.reset({
+        title: risk.title,
+        description: risk.description || "",
+        assessment_type: risk.assessment_type,
+        system_id: risk.system_id || "",
+        probability: risk.probability || 5,
+        severity: risk.severity || 5,
+        detectability: risk.detectability || 5,
+        risk_level: (risk.risk_level as "low" | "medium" | "high" | "critical") || "medium",
+        residual_risk: (risk.residual_risk as "low" | "medium" | "high" | "critical") || "low",
+        controls: risk.controls || "",
+        status: (risk.status as "draft" | "pending" | "approved" | "rejected" | "completed" | "cancelled") || "draft",
+        assessor_id: risk.assessor_id || "",
+      });
+    } else {
+      form.reset({
+        title: "",
+        description: "",
+        assessment_type: "IRA",
+        system_id: "",
+        probability: 5,
+        severity: 5,
+        detectability: 5,
+        risk_level: "medium",
+        residual_risk: "low",
+        controls: "",
+        status: "draft",
+        assessor_id: "",
+      });
+    }
+  }, [risk, form]);
+
+  const handleSubmit = (values: RiskFormValues) => {
+    onSubmit(values);
+  };
+
+  const riskLevelLabels: Record<string, { label: string; className: string }> = {
+    low: { label: "Baixo", className: "text-success" },
+    medium: { label: "Médio", className: "text-warning" },
+    high: { label: "Alto", className: "text-destructive" },
+    critical: { label: "Crítico", className: "text-destructive font-bold" },
+  };
+
+  const currentRiskLevel = riskLevelLabels[form.watch("risk_level")];
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{risk ? "Editar Avaliação de Risco" : "Nova Avaliação de Risco"}</DialogTitle>
+          <DialogDescription>
+            {risk
+              ? "Atualize as informações da avaliação de risco"
+              : "Preencha as informações para criar uma nova avaliação"}
+          </DialogDescription>
+        </DialogHeader>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Título *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: Avaliação de Risco do LIMS" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="assessment_type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tipo de Avaliação *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o tipo" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="IRA">IRA - Avaliação de Risco Inicial</SelectItem>
+                        <SelectItem value="FRA">FRA - Avaliação de Risco Funcional</SelectItem>
+                        <SelectItem value="FMEA">FMEA - Análise de Modo e Efeito de Falha</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="system_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Sistema Relacionado</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o sistema" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {systems.map((system) => (
+                          <SelectItem key={system.id} value={system.id}>
+                            {system.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="draft">Rascunho</SelectItem>
+                        <SelectItem value="pending">Pendente</SelectItem>
+                        <SelectItem value="approved">Aprovado</SelectItem>
+                        <SelectItem value="completed">Concluído</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="assessor_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Avaliador</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o avaliador" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {profiles.map((profile) => (
+                          <SelectItem key={profile.id} value={profile.id}>
+                            {profile.full_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="residual_risk"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Risco Residual</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o risco residual" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="low">Baixo</SelectItem>
+                        <SelectItem value="medium">Médio</SelectItem>
+                        <SelectItem value="high">Alto</SelectItem>
+                        <SelectItem value="critical">Crítico</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Descrição</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Descreva o risco e seu contexto..."
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Risk Factors */}
+            <div className="space-y-4 rounded-lg border p-4">
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium">Fatores de Risco (RPN)</h4>
+                <div className="text-sm">
+                  Nível calculado: <span className={currentRiskLevel.className}>{currentRiskLevel.label}</span>
+                </div>
+              </div>
+
+              <FormField
+                control={form.control}
+                name="probability"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex justify-between">
+                      <FormLabel>Probabilidade</FormLabel>
+                      <span className="text-sm text-muted-foreground">{field.value}/10</span>
+                    </div>
+                    <FormControl>
+                      <Slider
+                        min={1}
+                        max={10}
+                        step={1}
+                        value={[field.value]}
+                        onValueChange={(value) => field.onChange(value[0])}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="severity"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex justify-between">
+                      <FormLabel>Severidade</FormLabel>
+                      <span className="text-sm text-muted-foreground">{field.value}/10</span>
+                    </div>
+                    <FormControl>
+                      <Slider
+                        min={1}
+                        max={10}
+                        step={1}
+                        value={[field.value]}
+                        onValueChange={(value) => field.onChange(value[0])}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="detectability"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex justify-between">
+                      <FormLabel>Detectabilidade</FormLabel>
+                      <span className="text-sm text-muted-foreground">{field.value}/10</span>
+                    </div>
+                    <FormControl>
+                      <Slider
+                        min={1}
+                        max={10}
+                        step={1}
+                        value={[field.value]}
+                        onValueChange={(value) => field.onChange(value[0])}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="text-sm text-muted-foreground">
+                RPN (Risk Priority Number) = {probability} × {severity} × {detectability} = {probability * severity * detectability}
+              </div>
+            </div>
+
+            <FormField
+              control={form.control}
+              name="controls"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Controles Implementados</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Descreva os controles implementados para mitigar o risco..."
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? "Salvando..." : risk ? "Salvar Alterações" : "Criar Avaliação"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
