@@ -1,13 +1,13 @@
 import { useState } from "react";
-import { Plus, Search, MoreHorizontal, Eye, Edit, Calendar, User } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Eye, Edit, Trash2, Calendar, Loader2 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,17 +21,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { validationProjects, type ValidationProject } from "@/data/mockData";
+import { useValidationProjects } from "@/hooks/useValidationProjects";
+import { ProjectFormDialog } from "@/components/projects/ProjectFormDialog";
+import { ProjectViewDialog } from "@/components/projects/ProjectViewDialog";
+import { DeleteProjectDialog } from "@/components/projects/DeleteProjectDialog";
+import type { Database } from "@/integrations/supabase/types";
+
+type ValidationProject = Database["public"]["Tables"]["validation_projects"]["Row"] & {
+  system?: { name: string } | null;
+  manager?: { full_name: string } | null;
+};
+
+const statusLabels: Record<string, string> = {
+  draft: "Planejamento",
+  pending: "Em Andamento",
+  approved: "Revisão",
+  rejected: "Rejeitado",
+  completed: "Concluído",
+  cancelled: "Pausado",
+};
 
 function getInitials(name: string): string {
   return name
@@ -42,29 +50,82 @@ function getInitials(name: string): string {
     .slice(0, 2);
 }
 
+function getProgressColor(progress: number) {
+  if (progress === 100) return "bg-success";
+  if (progress >= 50) return "bg-primary";
+  return "bg-warning";
+}
+
 export default function Projects() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isViewOpen, setIsViewOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<ValidationProject | null>(null);
 
-  const filteredProjects = validationProjects.filter((project) => {
+  const { projects, isLoading, createProject, updateProject, deleteProject } =
+    useValidationProjects();
+
+  const filteredProjects = projects.filter((project) => {
     const matchesSearch =
       project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.systemName.toLowerCase().includes(searchTerm.toLowerCase());
+      (project.system?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
     const matchesStatus = statusFilter === "all" || project.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  const handleViewProject = (project: ValidationProject) => {
-    setSelectedProject(project);
-    setIsDialogOpen(true);
+  const handleCreate = () => {
+    setSelectedProject(null);
+    setIsFormOpen(true);
   };
 
-  const getProgressColor = (progress: number) => {
-    if (progress === 100) return "bg-success";
-    if (progress >= 50) return "bg-primary";
-    return "bg-warning";
+  const handleView = (project: ValidationProject) => {
+    setSelectedProject(project);
+    setIsViewOpen(true);
+  };
+
+  const handleEdit = (project: ValidationProject) => {
+    setSelectedProject(project);
+    setIsFormOpen(true);
+    setIsViewOpen(false);
+  };
+
+  const handleDelete = (project: ValidationProject) => {
+    setSelectedProject(project);
+    setIsDeleteOpen(true);
+  };
+
+  const handleFormSubmit = (values: any) => {
+    const payload = {
+      ...values,
+      system_id: values.system_id || null,
+      manager_id: values.manager_id || null,
+      start_date: values.start_date || null,
+      target_date: values.target_date || null,
+      completion_date: values.completion_date || null,
+    };
+
+    if (selectedProject) {
+      updateProject.mutate(
+        { id: selectedProject.id, ...payload },
+        { onSuccess: () => setIsFormOpen(false) }
+      );
+    } else {
+      createProject.mutate(payload, { onSuccess: () => setIsFormOpen(false) });
+    }
+  };
+
+  const handleConfirmDelete = () => {
+    if (selectedProject) {
+      deleteProject.mutate(selectedProject.id, {
+        onSuccess: () => {
+          setIsDeleteOpen(false);
+          setSelectedProject(null);
+        },
+      });
+    }
   };
 
   return (
@@ -75,7 +136,7 @@ export default function Projects() {
         action={{
           label: "Novo Projeto",
           icon: Plus,
-          onClick: () => {},
+          onClick: handleCreate,
         }}
       />
 
@@ -98,11 +159,11 @@ export default function Projects() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos Status</SelectItem>
-                <SelectItem value="Planning">Planejamento</SelectItem>
-                <SelectItem value="In Progress">Em Andamento</SelectItem>
-                <SelectItem value="Review">Revisão</SelectItem>
-                <SelectItem value="Completed">Concluído</SelectItem>
-                <SelectItem value="On Hold">Pausado</SelectItem>
+                <SelectItem value="draft">Planejamento</SelectItem>
+                <SelectItem value="pending">Em Andamento</SelectItem>
+                <SelectItem value="approved">Revisão</SelectItem>
+                <SelectItem value="completed">Concluído</SelectItem>
+                <SelectItem value="cancelled">Pausado</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -110,130 +171,135 @@ export default function Projects() {
       </Card>
 
       {/* Projects Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {filteredProjects.map((project) => (
-          <Card key={project.id} className="flex flex-col transition-shadow hover:shadow-md">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <CardTitle className="text-lg">{project.name}</CardTitle>
-                  <p className="text-sm text-muted-foreground">{project.systemName}</p>
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleViewProject(project)}>
-                      <Eye className="mr-2 h-4 w-4" />
-                      Visualizar
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Edit className="mr-2 h-4 w-4" />
-                      Editar
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </CardHeader>
-            <CardContent className="flex-1">
-              <div className="space-y-4">
-                <StatusBadge status={project.status} />
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Progresso</span>
-                    <span className="font-medium">{project.progress}%</span>
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : filteredProjects.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <p className="text-muted-foreground mb-4">
+              {projects.length === 0
+                ? "Nenhum projeto cadastrado ainda."
+                : "Nenhum projeto encontrado com os filtros aplicados."}
+            </p>
+            {projects.length === 0 && (
+              <Button onClick={handleCreate}>
+                <Plus className="mr-2 h-4 w-4" />
+                Criar Primeiro Projeto
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {filteredProjects.map((project) => (
+            <Card key={project.id} className="flex flex-col transition-shadow hover:shadow-md">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <CardTitle className="text-lg">{project.name}</CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      {project.system?.name || "Sem sistema"}
+                    </p>
                   </div>
-                  <Progress value={project.progress} className={getProgressColor(project.progress)} />
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleView(project)}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        Visualizar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleEdit(project)}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-destructive"
+                        onClick={() => handleDelete(project)}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Excluir
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-                <div className="flex items-center gap-4 text-sm">
-                  <div className="flex items-center gap-1.5 text-muted-foreground">
-                    <Calendar className="h-4 w-4" />
-                    <span>{project.endDate}</span>
+              </CardHeader>
+              <CardContent className="flex-1">
+                <div className="space-y-4">
+                  <Badge variant="outline">
+                    {statusLabels[project.status || "draft"]}
+                  </Badge>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Progresso</span>
+                      <span className="font-medium">{project.progress || 0}%</span>
+                    </div>
+                    <Progress
+                      value={project.progress || 0}
+                      className={getProgressColor(project.progress || 0)}
+                    />
                   </div>
-                  <Badge variant="outline">{project.documents} docs</Badge>
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="border-t pt-4">
-              <div className="flex items-center gap-2">
-                <Avatar className="h-7 w-7">
-                  <AvatarFallback className="bg-primary/10 text-xs text-primary">
-                    {getInitials(project.responsible)}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="text-sm text-muted-foreground">{project.responsible}</span>
-              </div>
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
-
-      {/* View Project Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{selectedProject?.name}</DialogTitle>
-            <DialogDescription>Detalhes do projeto de validação</DialogDescription>
-          </DialogHeader>
-          {selectedProject && (
-            <div className="space-y-6 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-muted-foreground">Sistema</Label>
-                  <p className="font-medium">{selectedProject.systemName}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Status</Label>
-                  <div className="mt-1">
-                    <StatusBadge status={selectedProject.status} />
+                  <div className="flex items-center gap-4 text-sm">
+                    {project.target_date && (
+                      <div className="flex items-center gap-1.5 text-muted-foreground">
+                        <Calendar className="h-4 w-4" />
+                        <span>
+                          {new Date(project.target_date).toLocaleDateString("pt-BR")}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div>
-                  <Label className="text-muted-foreground">Responsável</Label>
-                  <div className="mt-1 flex items-center gap-2">
-                    <Avatar className="h-6 w-6">
+              </CardContent>
+              <CardFooter className="border-t pt-4">
+                {project.manager?.full_name ? (
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-7 w-7">
                       <AvatarFallback className="bg-primary/10 text-xs text-primary">
-                        {getInitials(selectedProject.responsible)}
+                        {getInitials(project.manager.full_name)}
                       </AvatarFallback>
                     </Avatar>
-                    <span>{selectedProject.responsible}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {project.manager.full_name}
+                    </span>
                   </div>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Documentos</Label>
-                  <p className="font-medium">{selectedProject.documents} documentos</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Data de Início</Label>
-                  <p className="font-medium">{selectedProject.startDate}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Data de Término</Label>
-                  <p className="font-medium">{selectedProject.endDate}</p>
-                </div>
-              </div>
-              <div>
-                <Label className="text-muted-foreground">Progresso</Label>
-                <div className="mt-2 space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>{selectedProject.progress}% concluído</span>
-                  </div>
-                  <Progress value={selectedProject.progress} className="h-3" />
-                </div>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              Fechar
-            </Button>
-            <Button>Editar Projeto</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+                ) : (
+                  <span className="text-sm text-muted-foreground">Sem gerente</span>
+                )}
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Dialogs */}
+      <ProjectFormDialog
+        open={isFormOpen}
+        onOpenChange={setIsFormOpen}
+        project={selectedProject}
+        onSubmit={handleFormSubmit}
+        isLoading={createProject.isPending || updateProject.isPending}
+      />
+
+      <ProjectViewDialog
+        open={isViewOpen}
+        onOpenChange={setIsViewOpen}
+        project={selectedProject}
+        onEdit={() => selectedProject && handleEdit(selectedProject)}
+      />
+
+      <DeleteProjectDialog
+        open={isDeleteOpen}
+        onOpenChange={setIsDeleteOpen}
+        projectName={selectedProject?.name || ""}
+        onConfirm={handleConfirmDelete}
+        isLoading={deleteProject.isPending}
+      />
     </AppLayout>
   );
 }
