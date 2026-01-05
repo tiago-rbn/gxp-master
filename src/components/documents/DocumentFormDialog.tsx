@@ -53,6 +53,7 @@ interface DocumentFormDialogProps {
   document?: Document | null;
   onSubmit: (values: DocumentFormValues & { file?: File }) => void;
   isLoading?: boolean;
+  initialContent?: { content: string; type: string } | null;
 }
 
 export function DocumentFormDialog({
@@ -61,6 +62,7 @@ export function DocumentFormDialog({
   document,
   onSubmit,
   isLoading,
+  initialContent,
 }: DocumentFormDialogProps) {
   const { data: systems = [] } = useSystemsForSelect();
   const { projects = [] } = useValidationProjects();
@@ -91,6 +93,16 @@ export function DocumentFormDialog({
         project_id: document.project_id || "",
         status: (document.status as "draft" | "pending" | "approved" | "rejected" | "completed" | "cancelled") || "draft",
       });
+    } else if (initialContent) {
+      form.reset({
+        title: "",
+        document_type: initialContent.type,
+        content: initialContent.content,
+        version: "1.0",
+        system_id: "",
+        project_id: "",
+        status: "draft",
+      });
     } else {
       form.reset({
         title: "",
@@ -103,7 +115,7 @@ export function DocumentFormDialog({
       });
       setSelectedFile(null);
     }
-  }, [document, form]);
+  }, [document, form, initialContent]);
 
   const handleSubmit = (values: DocumentFormValues) => {
     onSubmit({ ...values, file: selectedFile || undefined });
