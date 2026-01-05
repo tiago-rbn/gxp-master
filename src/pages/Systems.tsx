@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, Trash2 } from "lucide-react";
+import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, Trash2, Loader2 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { StatusBadge } from "@/components/shared/StatusBadge";
 import { GampBadge } from "@/components/shared/GampBadge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -28,36 +27,115 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { systems, type System } from "@/data/mockData";
+import { useSystems } from "@/hooks/useSystems";
+import { SystemFormDialog } from "@/components/systems/SystemFormDialog";
+import { SystemViewDialog } from "@/components/systems/SystemViewDialog";
+import { DeleteSystemDialog } from "@/components/systems/DeleteSystemDialog";
+import type { Database } from "@/integrations/supabase/types";
+
+type System = Database["public"]["Tables"]["systems"]["Row"] & {
+  responsible?: { full_name: string } | null;
+};
+
+const gampCategoryMap: Record<string, 1 | 3 | 4 | 5> = {
+  "1": 1,
+  "3": 3,
+  "4": 4,
+  "5": 5,
+};
+
+const validationStatusLabels: Record<string, string> = {
+  not_started: "Não Iniciado",
+  in_progress: "Em Andamento",
+  validated: "Validado",
+  expired: "Expirado",
+};
+
+const validationStatusColors: Record<string, string> = {
+  not_started: "bg-muted text-muted-foreground",
+  in_progress: "bg-warning/10 text-warning border-warning/20",
+  validated: "bg-success/10 text-success border-success/20",
+  expired: "bg-destructive/10 text-destructive border-destructive/20",
+};
+
+const criticalityConfig: Record<string, { label: string; className: string }> = {
+  low: { label: "Baixa", className: "border-success/20 bg-success/10 text-success" },
+  medium: { label: "Média", className: "border-warning/20 bg-warning/10 text-warning" },
+  high: { label: "Alta", className: "border-destructive/20 bg-destructive/10 text-destructive" },
+};
 
 export default function Systems() {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isViewOpen, setIsViewOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedSystem, setSelectedSystem] = useState<System | null>(null);
 
+  const { systems, isLoading, createSystem, updateSystem, deleteSystem } = useSystems();
+
   const filteredSystems = systems.filter((system) => {
-    const matchesSearch = system.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      system.vendor.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === "all" || system.gampCategory.toString() === categoryFilter;
-    const matchesStatus = statusFilter === "all" || system.validationStatus === statusFilter;
+    const matchesSearch =
+      system.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (system.vendor?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
+    const matchesCategory =
+      categoryFilter === "all" || system.gamp_category === categoryFilter;
+    const matchesStatus =
+      statusFilter === "all" || system.validation_status === statusFilter;
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
-  const handleViewSystem = (system: System) => {
+  const handleCreate = () => {
+    setSelectedSystem(null);
+    setIsFormOpen(true);
+  };
+
+  const handleView = (system: System) => {
     setSelectedSystem(system);
-    setIsDialogOpen(true);
+    setIsViewOpen(true);
+  };
+
+  const handleEdit = (system: System) => {
+    setSelectedSystem(system);
+    setIsFormOpen(true);
+    setIsViewOpen(false);
+  };
+
+  const handleDelete = (system: System) => {
+    setSelectedSystem(system);
+    setIsDeleteOpen(true);
+  };
+
+  const handleFormSubmit = (values: any) => {
+    const payload = {
+      ...values,
+      responsible_id: values.responsible_id || null,
+      last_validation_date: values.last_validation_date || null,
+      next_revalidation_date: values.next_revalidation_date || null,
+    };
+
+    if (selectedSystem) {
+      updateSystem.mutate(
+        { id: selectedSystem.id, ...payload },
+        { onSuccess: () => setIsFormOpen(false) }
+      );
+    } else {
+      createSystem.mutate(payload, { onSuccess: () => setIsFormOpen(false) });
+    }
+  };
+
+  const handleConfirmDelete = () => {
+    if (selectedSystem) {
+      deleteSystem.mutate(selectedSystem.id, {
+        onSuccess: () => {
+          setIsDeleteOpen(false);
+          setSelectedSystem(null);
+        },
+      });
+    }
   };
 
   return (
@@ -68,7 +146,7 @@ export default function Systems() {
         action={{
           label: "Novo Sistema",
           icon: Plus,
-          onClick: () => {},
+          onClick: handleCreate,
         }}
       />
 
@@ -105,10 +183,10 @@ export default function Systems() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos Status</SelectItem>
-                  <SelectItem value="Validated">Validado</SelectItem>
-                  <SelectItem value="In Progress">Em Andamento</SelectItem>
-                  <SelectItem value="Pending">Pendente</SelectItem>
-                  <SelectItem value="Expired">Expirado</SelectItem>
+                  <SelectItem value="validated">Validado</SelectItem>
+                  <SelectItem value="in_progress">Em Andamento</SelectItem>
+                  <SelectItem value="not_started">Não Iniciado</SelectItem>
+                  <SelectItem value="expired">Expirado</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -119,149 +197,139 @@ export default function Systems() {
       {/* Systems Table */}
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Sistema</TableHead>
-                <TableHead>Fornecedor</TableHead>
-                <TableHead>Versão</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Categoria GAMP</TableHead>
-                <TableHead>Criticidade</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Responsável</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredSystems.map((system) => (
-                <TableRow key={system.id} className="cursor-pointer hover:bg-muted/50">
-                  <TableCell className="font-medium">{system.name}</TableCell>
-                  <TableCell>{system.vendor}</TableCell>
-                  <TableCell>{system.version}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{system.type}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <GampBadge category={system.gampCategory} />
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={
-                        system.criticality === "High"
-                          ? "border-destructive/20 bg-destructive/10 text-destructive"
-                          : system.criticality === "Medium"
-                          ? "border-warning/20 bg-warning/10 text-warning"
-                          : "border-success/20 bg-success/10 text-success"
-                      }
-                    >
-                      {system.criticality === "High" ? "Alta" : system.criticality === "Medium" ? "Média" : "Baixa"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge status={system.validationStatus} />
-                  </TableCell>
-                  <TableCell>{system.responsible}</TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleViewSystem(system)}>
-                          <Eye className="mr-2 h-4 w-4" />
-                          Visualizar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : filteredSystems.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <p className="text-muted-foreground mb-4">
+                {systems.length === 0
+                  ? "Nenhum sistema cadastrado ainda."
+                  : "Nenhum sistema encontrado com os filtros aplicados."}
+              </p>
+              {systems.length === 0 && (
+                <Button onClick={handleCreate}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Cadastrar Primeiro Sistema
+                </Button>
+              )}
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Sistema</TableHead>
+                  <TableHead>Fornecedor</TableHead>
+                  <TableHead>Versão</TableHead>
+                  <TableHead>Categoria GAMP</TableHead>
+                  <TableHead>Criticidade</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Responsável</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredSystems.map((system) => {
+                  const gampNum = gampCategoryMap[system.gamp_category];
+                  const criticality = criticalityConfig[system.criticality || "medium"];
+                  const statusLabel = validationStatusLabels[system.validation_status || "not_started"];
+                  const statusColor = validationStatusColors[system.validation_status || "not_started"];
+
+                  return (
+                    <TableRow
+                      key={system.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleView(system)}
+                    >
+                      <TableCell className="font-medium">{system.name}</TableCell>
+                      <TableCell>{system.vendor || "-"}</TableCell>
+                      <TableCell>{system.version || "-"}</TableCell>
+                      <TableCell>
+                        <GampBadge category={gampNum} />
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={criticality.className}>
+                          {criticality.label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={statusColor}>
+                          {statusLabel}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{system.responsible?.full_name || "-"}</TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleView(system);
+                              }}
+                            >
+                              <Eye className="mr-2 h-4 w-4" />
+                              Visualizar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEdit(system);
+                              }}
+                            >
+                              <Edit className="mr-2 h-4 w-4" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(system);
+                              }}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
-      {/* View System Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{selectedSystem?.name}</DialogTitle>
-            <DialogDescription>Detalhes do sistema</DialogDescription>
-          </DialogHeader>
-          {selectedSystem && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-muted-foreground">Fornecedor</Label>
-                  <p className="font-medium">{selectedSystem.vendor}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Versão</Label>
-                  <p className="font-medium">{selectedSystem.version}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Tipo</Label>
-                  <p className="font-medium">{selectedSystem.type}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Categoria GAMP</Label>
-                  <div className="mt-1">
-                    <GampBadge category={selectedSystem.gampCategory} showDescription />
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Impacto GxP</Label>
-                  <p className="font-medium">{selectedSystem.gxpImpact}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Criticidade</Label>
-                  <p className="font-medium">{selectedSystem.criticality}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Status de Validação</Label>
-                  <div className="mt-1">
-                    <StatusBadge status={selectedSystem.validationStatus} />
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Responsável</Label>
-                  <p className="font-medium">{selectedSystem.responsible}</p>
-                </div>
-                {selectedSystem.lastValidation && (
-                  <div>
-                    <Label className="text-muted-foreground">Última Validação</Label>
-                    <p className="font-medium">{selectedSystem.lastValidation}</p>
-                  </div>
-                )}
-                {selectedSystem.nextRevalidation && (
-                  <div>
-                    <Label className="text-muted-foreground">Próxima Revalidação</Label>
-                    <p className="font-medium">{selectedSystem.nextRevalidation}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              Fechar
-            </Button>
-            <Button>Editar Sistema</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Dialogs */}
+      <SystemFormDialog
+        open={isFormOpen}
+        onOpenChange={setIsFormOpen}
+        system={selectedSystem}
+        onSubmit={handleFormSubmit}
+        isLoading={createSystem.isPending || updateSystem.isPending}
+      />
+
+      <SystemViewDialog
+        open={isViewOpen}
+        onOpenChange={setIsViewOpen}
+        system={selectedSystem}
+        onEdit={() => selectedSystem && handleEdit(selectedSystem)}
+      />
+
+      <DeleteSystemDialog
+        open={isDeleteOpen}
+        onOpenChange={setIsDeleteOpen}
+        systemName={selectedSystem?.name || ""}
+        onConfirm={handleConfirmDelete}
+        isLoading={deleteSystem.isPending}
+      />
     </AppLayout>
   );
 }
