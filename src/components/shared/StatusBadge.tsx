@@ -9,7 +9,12 @@ export type StatusType =
   | 'Active' | 'Inactive'
   | 'Open' | 'Mitigated' | 'Accepted'
   // Database status values (lowercase)
-  | 'pending' | 'in_review' | 'approved' | 'in_progress' | 'completed' | 'rejected' | 'draft' | 'cancelled';
+  | 'pending' | 'in_review' | 'approved' | 'in_progress' | 'completed' | 'rejected' | 'draft' | 'cancelled'
+  // Validation status values
+  | 'not_started' | 'validated' | 'expired' | 'pending_revalidation'
+  // Portuguese labels (for compatibility)
+  | 'Rascunho' | 'Pendente' | 'Aprovado' | 'Concluído' | 'Cancelado' 
+  | 'Não Iniciado' | 'Em Andamento' | 'Validado' | 'Expirado' | 'Revalidação Pendente';
 
 interface StatusBadgeProps {
   status: StatusType;
@@ -58,6 +63,24 @@ const statusConfig: Record<StatusType, { label: string; variant: string }> = {
   'rejected': { label: 'Rejeitado', variant: 'bg-destructive/10 text-destructive border-destructive/20' },
   'draft': { label: 'Rascunho', variant: 'bg-muted text-muted-foreground border-border' },
   'cancelled': { label: 'Cancelado', variant: 'bg-muted text-muted-foreground border-border' },
+  
+  // Validation status values
+  'not_started': { label: 'Não Iniciado', variant: 'bg-muted text-muted-foreground border-border' },
+  'validated': { label: 'Validado', variant: 'bg-success/10 text-success border-success/20' },
+  'expired': { label: 'Expirado', variant: 'bg-destructive/10 text-destructive border-destructive/20' },
+  'pending_revalidation': { label: 'Revalidação Pendente', variant: 'bg-orange-500/10 text-orange-600 border-orange-500/20' },
+  
+  // Portuguese labels (for compatibility)
+  'Rascunho': { label: 'Rascunho', variant: 'bg-muted text-muted-foreground border-border' },
+  'Pendente': { label: 'Pendente', variant: 'bg-warning/10 text-warning border-warning/20' },
+  'Aprovado': { label: 'Aprovado', variant: 'bg-success/10 text-success border-success/20' },
+  'Concluído': { label: 'Concluído', variant: 'bg-success/10 text-success border-success/20' },
+  'Cancelado': { label: 'Cancelado', variant: 'bg-muted text-muted-foreground border-border' },
+  'Não Iniciado': { label: 'Não Iniciado', variant: 'bg-muted text-muted-foreground border-border' },
+  'Em Andamento': { label: 'Em Andamento', variant: 'bg-info/10 text-info border-info/20' },
+  'Validado': { label: 'Validado', variant: 'bg-success/10 text-success border-success/20' },
+  'Expirado': { label: 'Expirado', variant: 'bg-destructive/10 text-destructive border-destructive/20' },
+  'Revalidação Pendente': { label: 'Revalidação Pendente', variant: 'bg-orange-500/10 text-orange-600 border-orange-500/20' },
 };
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {
