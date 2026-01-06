@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Building2, Users, Shield, FileText, Settings as SettingsIcon, Plus, Edit, Trash2, MoreHorizontal, Loader2 } from "lucide-react";
+import { Building2, Users, Shield, FileText, Settings as SettingsIcon, Plus, Edit, Trash2, MoreHorizontal, Loader2, Mail, Send, RefreshCw, XCircle, Clock } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge, StatusType } from "@/components/shared/StatusBadge";
@@ -29,10 +29,15 @@ import { Switch } from "@/components/ui/switch";
 import { useCompanySettings } from "@/hooks/useCompanySettings";
 import { useProfiles, Profile } from "@/hooks/useProfiles";
 import { useDocumentTemplates, DocumentTemplate } from "@/hooks/useDocumentTemplates";
+import { useInvitations } from "@/hooks/useInvitations";
+import { useAuth } from "@/contexts/AuthContext";
 import { UserFormDialog } from "@/components/settings/UserFormDialog";
 import { TemplateFormDialog } from "@/components/settings/TemplateFormDialog";
 import { DeleteTemplateDialog } from "@/components/settings/DeleteTemplateDialog";
+import { InviteUserDialog } from "@/components/settings/InviteUserDialog";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 function getInitials(name: string): string {
   return name
@@ -60,9 +65,11 @@ const roleColors: Record<string, string> = {
 };
 
 export default function Settings() {
+  const { user } = useAuth();
   const { company, isLoading: companyLoading, updateCompany } = useCompanySettings();
   const { profiles, isLoading: profilesLoading, updateProfile, toggleUserStatus } = useProfiles();
   const { templates, isLoading: templatesLoading, addTemplate, updateTemplate, deleteTemplate } = useDocumentTemplates();
+  const { invitations, isLoading: invitationsLoading, sendInvitation, cancelInvitation, resendInvitation } = useInvitations();
 
   // Company form state
   const [companyForm, setCompanyForm] = useState({
@@ -89,6 +96,7 @@ export default function Settings() {
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
   const [deleteTemplateDialogOpen, setDeleteTemplateDialogOpen] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState<DocumentTemplate | null>(null);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
 
   // Load company data into form
   useEffect(() => {
@@ -196,6 +204,26 @@ export default function Settings() {
     setTemplateToDelete(null);
   };
 
+  const handleSendInvite = async (email: string, role: string) => {
+    if (!company || !user) return;
+
+    // Get current user's profile to get their name
+    const currentProfile = profiles?.find(p => p.id === user.id);
+    const inviterName = currentProfile?.full_name || user.email || "Usuário";
+
+    await sendInvitation.mutateAsync({
+      email,
+      role,
+      companyId: company.id,
+      companyName: company.name,
+      inviterName,
+    });
+    setInviteDialogOpen(false);
+  };
+
+  const pendingInvitations = invitations?.filter(i => i.status === "pending") || [];
+  const isInvitationExpired = (expiresAt: string) => new Date(expiresAt) < new Date();
+
   if (companyLoading) {
     return (
       <AppLayout>
@@ -289,13 +317,18 @@ export default function Settings() {
         </TabsContent>
 
         {/* Users Tab */}
-        <TabsContent value="users">
+        <TabsContent value="users" className="space-y-6">
+          {/* Active Users */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle>Usuários</CardTitle>
                 <CardDescription>Gerencie os usuários do sistema</CardDescription>
               </div>
+              <Button onClick={() => setInviteDialogOpen(true)}>
+                <Mail className="mr-2 h-4 w-4" />
+                Convidar Usuário
+              </Button>
             </CardHeader>
             <CardContent>
               {profilesLoading ? (
@@ -382,6 +415,90 @@ export default function Settings() {
               )}
             </CardContent>
           </Card>
+
+          {/* Pending Invitations */}
+          {pendingInvitations.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5" />
+                  Convites Pendentes
+                </CardTitle>
+                <CardDescription>
+                  Convites aguardando aceitação ({pendingInvitations.length})
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Perfil</TableHead>
+                      <TableHead>Enviado em</TableHead>
+                      <TableHead>Expira em</TableHead>
+                      <TableHead>Convidado por</TableHead>
+                      <TableHead className="w-[100px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pendingInvitations.map((invitation) => (
+                      <TableRow key={invitation.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium">{invitation.email}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={roleColors[invitation.role]}>
+                            {roleLabels[invitation.role] || invitation.role}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {format(new Date(invitation.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                        </TableCell>
+                        <TableCell>
+                          {isInvitationExpired(invitation.expires_at) ? (
+                            <Badge variant="destructive">Expirado</Badge>
+                          ) : (
+                            <span className="text-muted-foreground">
+                              {format(new Date(invitation.expires_at), "dd/MM/yyyy", { locale: ptBR })}
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {invitation.inviter?.full_name || "-"}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => resendInvitation.mutate(invitation)}
+                              disabled={resendInvitation.isPending}
+                              title="Reenviar convite"
+                            >
+                              <RefreshCw className={`h-4 w-4 ${resendInvitation.isPending ? 'animate-spin' : ''}`} />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => cancelInvitation.mutate(invitation.id)}
+                              disabled={cancelInvitation.isPending}
+                              title="Cancelar convite"
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Permissions Tab */}
@@ -630,6 +747,14 @@ export default function Settings() {
         templateName={templateToDelete?.name || ""}
         onConfirm={handleDeleteTemplateConfirm}
         isDeleting={deleteTemplate.isPending}
+      />
+
+      {/* Invite User Dialog */}
+      <InviteUserDialog
+        open={inviteDialogOpen}
+        onOpenChange={setInviteDialogOpen}
+        onSubmit={handleSendInvite}
+        isSubmitting={sendInvitation.isPending}
       />
     </AppLayout>
   );
