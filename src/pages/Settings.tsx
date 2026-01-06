@@ -67,7 +67,7 @@ const roleColors: Record<string, string> = {
 export default function Settings() {
   const { user } = useAuth();
   const { company, isLoading: companyLoading, updateCompany } = useCompanySettings();
-  const { profiles, isLoading: profilesLoading, updateProfile, toggleUserStatus } = useProfiles();
+  const { profiles, isLoading: profilesLoading, updateProfile, toggleUserStatus, isSuperAdmin, updateUserRole } = useProfiles();
   const { templates, isLoading: templatesLoading, addTemplate, updateTemplate, deleteTemplate } = useDocumentTemplates();
   const { invitations, isLoading: invitationsLoading, sendInvitation, cancelInvitation, resendInvitation } = useInvitations();
 
@@ -341,6 +341,7 @@ export default function Settings() {
                     <TableRow>
                       <TableHead>Usuário</TableHead>
                       <TableHead>Email</TableHead>
+                      {isSuperAdmin && <TableHead>Empresa</TableHead>}
                       <TableHead>Perfil</TableHead>
                       <TableHead>Departamento</TableHead>
                       <TableHead>Status</TableHead>
@@ -348,34 +349,60 @@ export default function Settings() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {profiles?.map((user) => (
-                      <TableRow key={user.id}>
+                    {profiles?.map((profile) => (
+                      <TableRow key={profile.id}>
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <Avatar className="h-8 w-8">
                               <AvatarFallback className="bg-primary/10 text-primary">
-                                {getInitials(user.full_name)}
+                                {getInitials(profile.full_name)}
                               </AvatarFallback>
                             </Avatar>
                             <div>
-                              <span className="font-medium">{user.full_name}</span>
-                              {user.position && (
-                                <p className="text-xs text-muted-foreground">{user.position}</p>
+                              <span className="font-medium">{profile.full_name}</span>
+                              {profile.position && (
+                                <p className="text-xs text-muted-foreground">{profile.position}</p>
                               )}
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell>{user.email}</TableCell>
+                        <TableCell>{profile.email}</TableCell>
+                        {isSuperAdmin && (
+                          <TableCell className="text-muted-foreground">
+                            {profile.company_name || "-"}
+                          </TableCell>
+                        )}
                         <TableCell>
-                          <Badge variant="outline" className={roleColors[user.role || "reader"]}>
-                            {roleLabels[user.role || "reader"] || user.role}
-                          </Badge>
+                          {isSuperAdmin ? (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm" className={roleColors[profile.role || "reader"]}>
+                                  {roleLabels[profile.role || "reader"] || profile.role}
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent>
+                                {Object.entries(roleLabels).map(([key, label]) => (
+                                  <DropdownMenuItem
+                                    key={key}
+                                    onClick={() => updateUserRole.mutate({ userId: profile.id, role: key })}
+                                    className={profile.role === key ? "bg-accent" : ""}
+                                  >
+                                    {label}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          ) : (
+                            <Badge variant="outline" className={roleColors[profile.role || "reader"]}>
+                              {roleLabels[profile.role || "reader"] || profile.role}
+                            </Badge>
+                          )}
                         </TableCell>
                         <TableCell className="text-muted-foreground">
-                          {user.department || "-"}
+                          {profile.department || "-"}
                         </TableCell>
                         <TableCell>
-                          <StatusBadge status={user.is_active ? "approved" : "cancelled" as StatusType} />
+                          <StatusBadge status={profile.is_active ? "approved" : "cancelled" as StatusType} />
                         </TableCell>
                         <TableCell>
                           <DropdownMenu>
@@ -385,15 +412,15 @@ export default function Settings() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleEditUser(user)}>
+                              <DropdownMenuItem onClick={() => handleEditUser(profile)}>
                                 <Edit className="mr-2 h-4 w-4" />
                                 Editar
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                className={user.is_active ? "text-destructive" : "text-success"}
-                                onClick={() => handleToggleUserStatus(user)}
+                                className={profile.is_active ? "text-destructive" : "text-success"}
+                                onClick={() => handleToggleUserStatus(profile)}
                               >
-                                {user.is_active ? (
+                                {profile.is_active ? (
                                   <>
                                     <Trash2 className="mr-2 h-4 w-4" />
                                     Desativar

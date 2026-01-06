@@ -6,44 +6,86 @@ import { Tables } from "@/integrations/supabase/types";
 
 export type Profile = Tables<"profiles"> & {
   role?: string;
+  company_name?: string;
 };
 
 export function useProfiles() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: profiles, isLoading, error } = useQuery({
-    queryKey: ["profiles", user?.id],
+  // Check if user is super_admin
+  const { data: isSuperAdmin } = useQuery({
+    queryKey: ["is-super-admin", user?.id],
     queryFn: async () => {
-      const { data: currentProfile } = await supabase
-        .from("profiles")
-        .select("company_id")
-        .eq("id", user!.id)
-        .single();
-
-      if (!currentProfile?.company_id) throw new Error("Empresa não encontrada");
-
-      const { data: profilesData, error: profilesError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("company_id", currentProfile.company_id)
-        .order("full_name");
-
-      if (profilesError) throw profilesError;
-
-      // Fetch roles separately
-      const { data: rolesData } = await supabase
+      const { data } = await supabase
         .from("user_roles")
-        .select("user_id, role");
-
-      const rolesMap = new Map(rolesData?.map(r => [r.user_id, r.role]) || []);
-
-      return profilesData.map(p => ({
-        ...p,
-        role: rolesMap.get(p.id) || "reader",
-      })) as Profile[];
+        .select("role")
+        .eq("user_id", user!.id)
+        .eq("role", "super_admin")
+        .maybeSingle();
+      return !!data;
     },
     enabled: !!user,
+  });
+
+  const { data: profiles, isLoading, error } = useQuery({
+    queryKey: ["profiles", user?.id, isSuperAdmin],
+    queryFn: async () => {
+      let profilesQuery;
+
+      if (isSuperAdmin) {
+        // Super admin sees all profiles with company names
+        const { data: profilesData, error: profilesError } = await supabase
+          .from("profiles")
+          .select("*, companies(name)")
+          .order("full_name");
+
+        if (profilesError) throw profilesError;
+
+        // Fetch all roles
+        const { data: rolesData } = await supabase
+          .from("user_roles")
+          .select("user_id, role");
+
+        const rolesMap = new Map(rolesData?.map(r => [r.user_id, r.role]) || []);
+
+        return profilesData.map(p => ({
+          ...p,
+          role: rolesMap.get(p.id) || "reader",
+          company_name: (p.companies as { name: string } | null)?.name,
+        })) as Profile[];
+      } else {
+        // Regular users only see their company's profiles
+        const { data: currentProfile } = await supabase
+          .from("profiles")
+          .select("company_id")
+          .eq("id", user!.id)
+          .single();
+
+        if (!currentProfile?.company_id) throw new Error("Empresa não encontrada");
+
+        const { data: profilesData, error: profilesError } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("company_id", currentProfile.company_id)
+          .order("full_name");
+
+        if (profilesError) throw profilesError;
+
+        // Fetch roles
+        const { data: rolesData } = await supabase
+          .from("user_roles")
+          .select("user_id, role");
+
+        const rolesMap = new Map(rolesData?.map(r => [r.user_id, r.role]) || []);
+
+        return profilesData.map(p => ({
+          ...p,
+          role: rolesMap.get(p.id) || "reader",
+        })) as Profile[];
+      }
+    },
+    enabled: !!user && isSuperAdmin !== undefined,
   });
 
   const updateProfile = useMutation({
@@ -88,11 +130,44 @@ export function useProfiles() {
     },
   });
 
+  const updateUserRole = useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
+      // First check if user has a role entry
+      const { data: existing } = await supabase
+        .from("user_roles")
+        .select("id")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (existing) {
+        const { error } = await supabase
+          .from("user_roles")
+          .update({ role: role as any })
+          .eq("user_id", userId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("user_roles")
+          .insert({ user_id: userId, role: role as any });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["profiles"] });
+      toast.success("Perfil do usuário atualizado");
+    },
+    onError: (error) => {
+      toast.error("Erro ao atualizar perfil: " + error.message);
+    },
+  });
+
   return {
     profiles,
     isLoading,
     error,
+    isSuperAdmin,
     updateProfile,
     toggleUserStatus,
+    updateUserRole,
   };
 }
