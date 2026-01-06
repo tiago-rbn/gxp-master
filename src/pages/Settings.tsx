@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { Building2, Users, Shield, FileText, Settings as SettingsIcon, Plus, Edit, Trash2, MoreHorizontal } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Building2, Users, Shield, FileText, Settings as SettingsIcon, Plus, Edit, Trash2, MoreHorizontal, Loader2 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { StatusBadge } from "@/components/shared/StatusBadge";
+import { StatusBadge, StatusType } from "@/components/shared/StatusBadge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +26,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { users } from "@/data/mockData";
+import { useCompanySettings } from "@/hooks/useCompanySettings";
+import { useProfiles, Profile } from "@/hooks/useProfiles";
+import { useDocumentTemplates, DocumentTemplate } from "@/hooks/useDocumentTemplates";
+import { UserFormDialog } from "@/components/settings/UserFormDialog";
+import { TemplateFormDialog } from "@/components/settings/TemplateFormDialog";
+import { DeleteTemplateDialog } from "@/components/settings/DeleteTemplateDialog";
+import { toast } from "sonner";
 
 function getInitials(name: string): string {
   return name
@@ -37,16 +43,168 @@ function getInitials(name: string): string {
     .slice(0, 2);
 }
 
+const roleLabels: Record<string, string> = {
+  super_admin: "Super Admin",
+  admin: "Admin",
+  validator: "Validador",
+  responsible: "Responsável",
+  reader: "Leitor",
+};
+
 const roleColors: Record<string, string> = {
-  "Super Admin": "bg-destructive/10 text-destructive border-destructive/20",
-  Admin: "bg-primary/10 text-primary border-primary/20",
-  Validator: "bg-info/10 text-info border-info/20",
-  Responsible: "bg-warning/10 text-warning border-warning/20",
-  Reader: "bg-muted text-muted-foreground border-border",
+  super_admin: "bg-destructive/10 text-destructive border-destructive/20",
+  admin: "bg-primary/10 text-primary border-primary/20",
+  validator: "bg-info/10 text-info border-info/20",
+  responsible: "bg-warning/10 text-warning border-warning/20",
+  reader: "bg-muted text-muted-foreground border-border",
 };
 
 export default function Settings() {
+  const { company, isLoading: companyLoading, updateCompany } = useCompanySettings();
+  const { profiles, isLoading: profilesLoading, updateProfile, toggleUserStatus } = useProfiles();
+  const { templates, isLoading: templatesLoading, addTemplate, updateTemplate, deleteTemplate } = useDocumentTemplates();
+
+  // Company form state
+  const [companyForm, setCompanyForm] = useState({
+    name: "",
+    cnpj: "",
+    address: "",
+    phone: "",
+  });
+
+  // Parameters state
   const [riskThreshold, setRiskThreshold] = useState([6]);
+  const [autoRevalidation, setAutoRevalidation] = useState(true);
+  const [notifyHighRisks, setNotifyHighRisks] = useState(true);
+  const [requireDualApproval, setRequireDualApproval] = useState(false);
+  const [criticalRevalidationMonths, setCriticalRevalidationMonths] = useState(12);
+  const [nonCriticalRevalidationMonths, setNonCriticalRevalidationMonths] = useState(24);
+  const [revalidationAlertDays, setRevalidationAlertDays] = useState(30);
+  const [documentExpirationDays, setDocumentExpirationDays] = useState(365);
+
+  // Dialog states
+  const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
+  const [userDialogOpen, setUserDialogOpen] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<DocumentTemplate | null>(null);
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [deleteTemplateDialogOpen, setDeleteTemplateDialogOpen] = useState(false);
+  const [templateToDelete, setTemplateToDelete] = useState<DocumentTemplate | null>(null);
+
+  // Load company data into form
+  useEffect(() => {
+    if (company) {
+      const settings = company.settings || {};
+      setCompanyForm({
+        name: company.name || "",
+        cnpj: company.cnpj || "",
+        address: settings.address || "",
+        phone: settings.phone || "",
+      });
+      setRiskThreshold([settings.risk_threshold || 6]);
+      setAutoRevalidation(settings.auto_revalidation ?? true);
+      setNotifyHighRisks(settings.notify_high_risks ?? true);
+      setRequireDualApproval(settings.require_dual_approval ?? false);
+      setCriticalRevalidationMonths(settings.critical_revalidation_months || 12);
+      setNonCriticalRevalidationMonths(settings.non_critical_revalidation_months || 24);
+      setRevalidationAlertDays(settings.revalidation_alert_days || 30);
+      setDocumentExpirationDays(settings.document_expiration_days || 365);
+    }
+  }, [company]);
+
+  const handleSaveCompany = async () => {
+    if (!company) return;
+    await updateCompany.mutateAsync({
+      name: companyForm.name,
+      cnpj: companyForm.cnpj,
+      settings: {
+        ...company.settings,
+        address: companyForm.address,
+        phone: companyForm.phone,
+      },
+    });
+  };
+
+  const handleSaveRiskParams = async () => {
+    if (!company) return;
+    await updateCompany.mutateAsync({
+      settings: {
+        ...company.settings,
+        risk_threshold: riskThreshold[0],
+        auto_revalidation: autoRevalidation,
+        notify_high_risks: notifyHighRisks,
+        require_dual_approval: requireDualApproval,
+      },
+    });
+  };
+
+  const handleSaveValidationParams = async () => {
+    if (!company) return;
+    await updateCompany.mutateAsync({
+      settings: {
+        ...company.settings,
+        critical_revalidation_months: criticalRevalidationMonths,
+        non_critical_revalidation_months: nonCriticalRevalidationMonths,
+        revalidation_alert_days: revalidationAlertDays,
+        document_expiration_days: documentExpirationDays,
+      },
+    });
+  };
+
+  const handleEditUser = (user: Profile) => {
+    setSelectedUser(user);
+    setUserDialogOpen(true);
+  };
+
+  const handleUserSubmit = async (data: Partial<Profile>) => {
+    if (!selectedUser) return;
+    await updateProfile.mutateAsync({ id: selectedUser.id, updates: data });
+    setUserDialogOpen(false);
+  };
+
+  const handleToggleUserStatus = async (user: Profile) => {
+    await toggleUserStatus.mutateAsync({ id: user.id, isActive: !user.is_active });
+  };
+
+  const handleNewTemplate = () => {
+    setSelectedTemplate(null);
+    setTemplateDialogOpen(true);
+  };
+
+  const handleEditTemplate = (template: DocumentTemplate) => {
+    setSelectedTemplate(template);
+    setTemplateDialogOpen(true);
+  };
+
+  const handleTemplateSubmit = async (data: Omit<DocumentTemplate, "id" | "created_at" | "updated_at">) => {
+    if (selectedTemplate) {
+      await updateTemplate.mutateAsync({ id: selectedTemplate.id, updates: data });
+    } else {
+      await addTemplate.mutateAsync(data);
+    }
+    setTemplateDialogOpen(false);
+  };
+
+  const handleDeleteTemplateClick = (template: DocumentTemplate) => {
+    setTemplateToDelete(template);
+    setDeleteTemplateDialogOpen(true);
+  };
+
+  const handleDeleteTemplateConfirm = async () => {
+    if (!templateToDelete) return;
+    await deleteTemplate.mutateAsync(templateToDelete.id);
+    setDeleteTemplateDialogOpen(false);
+    setTemplateToDelete(null);
+  };
+
+  if (companyLoading) {
+    return (
+      <AppLayout>
+        <div className="flex h-96 items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -90,23 +248,41 @@ export default function Settings() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="company-name">Nome da Empresa</Label>
-                  <Input id="company-name" defaultValue="Pharma Corp Ltda" />
+                  <Input
+                    id="company-name"
+                    value={companyForm.name}
+                    onChange={(e) => setCompanyForm({ ...companyForm, name: e.target.value })}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="cnpj">CNPJ</Label>
-                  <Input id="cnpj" defaultValue="12.345.678/0001-90" />
+                  <Input
+                    id="cnpj"
+                    value={companyForm.cnpj}
+                    onChange={(e) => setCompanyForm({ ...companyForm, cnpj: e.target.value })}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="address">Endereço</Label>
-                  <Input id="address" defaultValue="Av. Industrial, 1000 - São Paulo, SP" />
+                  <Input
+                    id="address"
+                    value={companyForm.address}
+                    onChange={(e) => setCompanyForm({ ...companyForm, address: e.target.value })}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone">Telefone</Label>
-                  <Input id="phone" defaultValue="(11) 3000-0000" />
+                  <Input
+                    id="phone"
+                    value={companyForm.phone}
+                    onChange={(e) => setCompanyForm({ ...companyForm, phone: e.target.value })}
+                  />
                 </div>
               </div>
               <div className="flex justify-end">
-                <Button>Salvar Alterações</Button>
+                <Button onClick={handleSaveCompany} disabled={updateCompany.isPending}>
+                  {updateCompany.isPending ? "Salvando..." : "Salvar Alterações"}
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -120,69 +296,90 @@ export default function Settings() {
                 <CardTitle>Usuários</CardTitle>
                 <CardDescription>Gerencie os usuários do sistema</CardDescription>
               </div>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Novo Usuário
-              </Button>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Usuário</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Perfil</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Último Acesso</TableHead>
-                    <TableHead className="w-[50px]"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback className="bg-primary/10 text-primary">
-                              {getInitials(user.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="font-medium">{user.name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={roleColors[user.role]}>
-                          {user.role}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge status={user.status} />
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{user.lastAccess}</TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive">
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Desativar
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+              {profilesLoading ? (
+                <div className="flex h-32 items-center justify-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Usuário</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Perfil</TableHead>
+                      <TableHead>Departamento</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {profiles?.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback className="bg-primary/10 text-primary">
+                                {getInitials(user.full_name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <span className="font-medium">{user.full_name}</span>
+                              {user.position && (
+                                <p className="text-xs text-muted-foreground">{user.position}</p>
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{user.email}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={roleColors[user.role || "reader"]}>
+                            {roleLabels[user.role || "reader"] || user.role}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {user.department || "-"}
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge status={user.is_active ? "approved" : "cancelled" as StatusType} />
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleEditUser(user)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className={user.is_active ? "text-destructive" : "text-success"}
+                                onClick={() => handleToggleUserStatus(user)}
+                              >
+                                {user.is_active ? (
+                                  <>
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Desativar
+                                  </>
+                                ) : (
+                                  <>
+                                    <Users className="mr-2 h-4 w-4" />
+                                    Ativar
+                                  </>
+                                )}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -200,9 +397,9 @@ export default function Settings() {
                   <TableRow>
                     <TableHead>Módulo</TableHead>
                     <TableHead className="text-center">Admin</TableHead>
-                    <TableHead className="text-center">Validator</TableHead>
-                    <TableHead className="text-center">Responsible</TableHead>
-                    <TableHead className="text-center">Reader</TableHead>
+                    <TableHead className="text-center">Validador</TableHead>
+                    <TableHead className="text-center">Responsável</TableHead>
+                    <TableHead className="text-center">Leitor</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -252,39 +449,57 @@ export default function Settings() {
                 <CardTitle>Templates de Documentos</CardTitle>
                 <CardDescription>Modelos para geração automática de documentos</CardDescription>
               </div>
-              <Button>
+              <Button onClick={handleNewTemplate}>
                 <Plus className="mr-2 h-4 w-4" />
                 Novo Template
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {[
-                  { name: "URS Template", type: "URS", version: "2.0" },
-                  { name: "Functional Specification", type: "FS", version: "1.5" },
-                  { name: "IQ Protocol", type: "IQ", version: "3.0" },
-                  { name: "OQ Protocol", type: "OQ", version: "3.0" },
-                  { name: "PQ Protocol", type: "PQ", version: "2.5" },
-                  { name: "Validation Report", type: "Report", version: "1.0" },
-                ].map((template) => (
-                  <Card key={template.name}>
-                    <CardContent className="flex items-center justify-between p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                          <FileText className="h-5 w-5 text-primary" />
+              {templatesLoading ? (
+                <div className="flex h-32 items-center justify-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {templates?.map((template) => (
+                    <Card key={template.id}>
+                      <CardContent className="flex items-center justify-between p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                            <FileText className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-medium">{template.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {template.document_type} • v{template.version}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium">{template.name}</p>
-                          <p className="text-sm text-muted-foreground">v{template.version}</p>
-                        </div>
-                      </div>
-                      <Button variant="ghost" size="icon">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEditTemplate(template)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() => handleDeleteTemplateClick(template)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -320,18 +535,20 @@ export default function Settings() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <Label>Revalidação Automática</Label>
-                    <Switch defaultChecked />
+                    <Switch checked={autoRevalidation} onCheckedChange={setAutoRevalidation} />
                   </div>
                   <div className="flex items-center justify-between">
                     <Label>Notificar Riscos Altos</Label>
-                    <Switch defaultChecked />
+                    <Switch checked={notifyHighRisks} onCheckedChange={setNotifyHighRisks} />
                   </div>
                   <div className="flex items-center justify-between">
                     <Label>Exigir Aprovação Dupla</Label>
-                    <Switch />
+                    <Switch checked={requireDualApproval} onCheckedChange={setRequireDualApproval} />
                   </div>
                 </div>
-                <Button>Salvar Parâmetros</Button>
+                <Button onClick={handleSaveRiskParams} disabled={updateCompany.isPending}>
+                  {updateCompany.isPending ? "Salvando..." : "Salvar Parâmetros"}
+                </Button>
               </CardContent>
             </Card>
 
@@ -346,28 +563,74 @@ export default function Settings() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label className="text-xs text-muted-foreground">Sistemas Críticos</Label>
-                      <Input type="number" defaultValue={12} />
+                      <Input
+                        type="number"
+                        value={criticalRevalidationMonths}
+                        onChange={(e) => setCriticalRevalidationMonths(Number(e.target.value))}
+                      />
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">Sistemas Não-Críticos</Label>
-                      <Input type="number" defaultValue={24} />
+                      <Input
+                        type="number"
+                        value={nonCriticalRevalidationMonths}
+                        onChange={(e) => setNonCriticalRevalidationMonths(Number(e.target.value))}
+                      />
                     </div>
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label>Alerta de Revalidação (dias antes)</Label>
-                  <Input type="number" defaultValue={30} />
+                  <Input
+                    type="number"
+                    value={revalidationAlertDays}
+                    onChange={(e) => setRevalidationAlertDays(Number(e.target.value))}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Dias para Expiração de Documentos</Label>
-                  <Input type="number" defaultValue={365} />
+                  <Input
+                    type="number"
+                    value={documentExpirationDays}
+                    onChange={(e) => setDocumentExpirationDays(Number(e.target.value))}
+                  />
                 </div>
-                <Button>Salvar Configurações</Button>
+                <Button onClick={handleSaveValidationParams} disabled={updateCompany.isPending}>
+                  {updateCompany.isPending ? "Salvando..." : "Salvar Configurações"}
+                </Button>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* User Edit Dialog */}
+      <UserFormDialog
+        open={userDialogOpen}
+        onOpenChange={setUserDialogOpen}
+        user={selectedUser}
+        onSubmit={handleUserSubmit}
+        isSubmitting={updateProfile.isPending}
+      />
+
+      {/* Template Form Dialog */}
+      <TemplateFormDialog
+        open={templateDialogOpen}
+        onOpenChange={setTemplateDialogOpen}
+        template={selectedTemplate}
+        onSubmit={handleTemplateSubmit}
+        isSubmitting={addTemplate.isPending || updateTemplate.isPending}
+        companyId={company?.id || ""}
+      />
+
+      {/* Delete Template Dialog */}
+      <DeleteTemplateDialog
+        open={deleteTemplateDialogOpen}
+        onOpenChange={setDeleteTemplateDialogOpen}
+        templateName={templateToDelete?.name || ""}
+        onConfirm={handleDeleteTemplateConfirm}
+        isDeleting={deleteTemplate.isPending}
+      />
     </AppLayout>
   );
 }
