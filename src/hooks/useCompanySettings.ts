@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import type { DocumentType } from "@/hooks/useDocumentTypes";
 
 export interface CompanySettings {
   id: string;
@@ -19,6 +20,7 @@ export interface CompanySettings {
     non_critical_revalidation_months?: number;
     revalidation_alert_days?: number;
     document_expiration_days?: number;
+    document_types?: DocumentType[];
   } | null;
 }
 

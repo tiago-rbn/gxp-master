@@ -34,6 +34,7 @@ import { DeleteDocumentDialog } from "@/components/documents/DeleteDocumentDialo
 import { AIDocumentDialog } from "@/components/documents/AIDocumentDialog";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { useDocumentTypes, defaultDocumentTypes } from "@/hooks/useDocumentTypes";
 
 type Document = Database["public"]["Tables"]["documents"]["Row"] & {
   system?: { name: string } | null;
@@ -50,17 +51,6 @@ const statusLabels: Record<string, string> = {
   cancelled: "Cancelado",
 };
 
-const documentTypeColors: Record<string, string> = {
-  URS: "bg-blue-500/10 text-blue-600 border-blue-500/20",
-  FS: "bg-purple-500/10 text-purple-600 border-purple-500/20",
-  DS: "bg-indigo-500/10 text-indigo-600 border-indigo-500/20",
-  IQ: "bg-green-500/10 text-green-600 border-green-500/20",
-  OQ: "bg-teal-500/10 text-teal-600 border-teal-500/20",
-  PQ: "bg-cyan-500/10 text-cyan-600 border-cyan-500/20",
-  RTM: "bg-orange-500/10 text-orange-600 border-orange-500/20",
-  Report: "bg-rose-500/10 text-rose-600 border-rose-500/20",
-};
-
 export default function Documents() {
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -75,6 +65,15 @@ export default function Documents() {
 
   const { documents, isLoading, stats, createDocument, updateDocument, deleteDocument } =
     useDocuments();
+  const { documentTypes } = useDocumentTypes();
+
+  const documentTypeColors = (documentTypes || defaultDocumentTypes).reduce(
+    (acc, type) => {
+      acc[type.code] = type.color || "bg-muted text-muted-foreground border-transparent";
+      return acc;
+    },
+    {} as Record<string, string>
+  );
 
   const filteredDocuments = documents.filter((doc) => {
     const matchesSearch =
@@ -181,16 +180,16 @@ export default function Documents() {
         >
           Todos ({documents.length})
         </Badge>
-        {["URS", "FS", "DS", "IQ", "OQ", "PQ", "RTM", "Report"].map((type) => {
-          const count = typeCounts[type] || 0;
+        {(documentTypes || defaultDocumentTypes).map((type) => {
+          const count = typeCounts[type.code] || 0;
           return (
             <Badge
-              key={type}
+              key={type.code}
               variant="outline"
-              className={`cursor-pointer ${typeFilter === type ? "bg-primary text-primary-foreground" : documentTypeColors[type]}`}
-              onClick={() => setTypeFilter(type)}
+              className={`cursor-pointer ${typeFilter === type.code ? "bg-primary text-primary-foreground" : documentTypeColors[type.code]}`}
+              onClick={() => setTypeFilter(type.code)}
             >
-              {type} ({count})
+              {type.code} ({count})
             </Badge>
           );
         })}

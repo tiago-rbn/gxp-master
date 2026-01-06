@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/select";
 import { useSystemsForSelect } from "@/hooks/useRiskAssessments";
 import { useValidationProjects } from "@/hooks/useValidationProjects";
+import { useDocumentTypes } from "@/hooks/useDocumentTypes";
 import type { Database } from "@/integrations/supabase/types";
 
 type Document = Database["public"]["Tables"]["documents"]["Row"];
@@ -66,6 +67,7 @@ export function DocumentFormDialog({
 }: DocumentFormDialogProps) {
   const { data: systems = [] } = useSystemsForSelect();
   const { projects = [] } = useValidationProjects();
+  const { documentTypes, isLoading: documentTypesLoading } = useDocumentTypes();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -106,7 +108,7 @@ export function DocumentFormDialog({
     } else {
       form.reset({
         title: "",
-        document_type: "URS",
+        document_type: documentTypes?.[0]?.code || "URS",
         content: "",
         version: "1.0",
         system_id: "",
@@ -115,7 +117,7 @@ export function DocumentFormDialog({
       });
       setSelectedFile(null);
     }
-  }, [document, form, initialContent]);
+  }, [document, form, initialContent, documentTypes]);
 
   const handleSubmit = (values: DocumentFormValues) => {
     onSubmit({ ...values, file: selectedFile || undefined });
@@ -181,14 +183,16 @@ export function DocumentFormDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="URS">URS - User Requirements</SelectItem>
-                        <SelectItem value="FS">FS - Functional Specification</SelectItem>
-                        <SelectItem value="DS">DS - Design Specification</SelectItem>
-                        <SelectItem value="IQ">IQ - Installation Qualification</SelectItem>
-                        <SelectItem value="OQ">OQ - Operational Qualification</SelectItem>
-                        <SelectItem value="PQ">PQ - Performance Qualification</SelectItem>
-                        <SelectItem value="RTM">RTM - Traceability Matrix</SelectItem>
-                        <SelectItem value="Report">Relatório de Validação</SelectItem>
+                        {documentTypesLoading && (
+                          <SelectItem value={field.value} disabled>
+                            Carregando tipos...
+                          </SelectItem>
+                        )}
+                        {documentTypes?.map((type) => (
+                          <SelectItem key={type.id} value={type.code}>
+                            {type.code} - {type.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Building2, Users, Shield, FileText, Settings as SettingsIcon, Plus, Edit, Trash2, MoreHorizontal, Loader2, Mail, Send, RefreshCw, XCircle, Clock } from "lucide-react";
+import { Building2, Users, Shield, FileText, Settings as SettingsIcon, Plus, Edit, Trash2, MoreHorizontal, Loader2, Mail, RefreshCw, XCircle, Clock, Tags } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge, StatusType } from "@/components/shared/StatusBadge";
@@ -29,12 +29,15 @@ import { Switch } from "@/components/ui/switch";
 import { useCompanySettings } from "@/hooks/useCompanySettings";
 import { useProfiles, Profile } from "@/hooks/useProfiles";
 import { useDocumentTemplates, DocumentTemplate } from "@/hooks/useDocumentTemplates";
+import { useDocumentTypes, DocumentType } from "@/hooks/useDocumentTypes";
 import { useInvitations } from "@/hooks/useInvitations";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserFormDialog } from "@/components/settings/UserFormDialog";
 import { TemplateFormDialog } from "@/components/settings/TemplateFormDialog";
 import { DeleteTemplateDialog } from "@/components/settings/DeleteTemplateDialog";
 import { InviteUserDialog } from "@/components/settings/InviteUserDialog";
+import { DocumentTypeFormDialog } from "@/components/settings/DocumentTypeFormDialog";
+import { DeleteDocumentTypeDialog } from "@/components/settings/DeleteDocumentTypeDialog";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -70,6 +73,7 @@ export default function Settings() {
   const { profiles, isLoading: profilesLoading, updateProfile, toggleUserStatus, isSuperAdmin, updateUserRole } = useProfiles();
   const { templates, isLoading: templatesLoading, addTemplate, updateTemplate, deleteTemplate } = useDocumentTemplates();
   const { invitations, isLoading: invitationsLoading, sendInvitation, cancelInvitation, resendInvitation } = useInvitations();
+  const { documentTypes, isLoading: documentTypesLoading, addDocumentType, updateDocumentType, deleteDocumentType } = useDocumentTypes();
 
   // Company form state
   const [companyForm, setCompanyForm] = useState({
@@ -97,6 +101,10 @@ export default function Settings() {
   const [deleteTemplateDialogOpen, setDeleteTemplateDialogOpen] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState<DocumentTemplate | null>(null);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [documentTypeDialogOpen, setDocumentTypeDialogOpen] = useState(false);
+  const [selectedDocumentType, setSelectedDocumentType] = useState<DocumentType | null>(null);
+  const [deleteDocumentTypeDialogOpen, setDeleteDocumentTypeDialogOpen] = useState(false);
+  const [documentTypeToDelete, setDocumentTypeToDelete] = useState<DocumentType | null>(null);
 
   // Load company data into form
   useEffect(() => {
@@ -204,6 +212,37 @@ export default function Settings() {
     setTemplateToDelete(null);
   };
 
+  const handleNewDocumentType = () => {
+    setSelectedDocumentType(null);
+    setDocumentTypeDialogOpen(true);
+  };
+
+  const handleEditDocumentType = (type: DocumentType) => {
+    setSelectedDocumentType(type);
+    setDocumentTypeDialogOpen(true);
+  };
+
+  const handleDocumentTypeSubmit = async (data: Omit<DocumentType, "id">) => {
+    if (selectedDocumentType) {
+      await updateDocumentType.mutateAsync({ id: selectedDocumentType.id, updates: data });
+    } else {
+      await addDocumentType.mutateAsync(data);
+    }
+    setDocumentTypeDialogOpen(false);
+  };
+
+  const handleDeleteDocumentTypeClick = (type: DocumentType) => {
+    setDocumentTypeToDelete(type);
+    setDeleteDocumentTypeDialogOpen(true);
+  };
+
+  const handleDeleteDocumentTypeConfirm = async () => {
+    if (!documentTypeToDelete) return;
+    await deleteDocumentType.mutateAsync(documentTypeToDelete.id);
+    setDeleteDocumentTypeDialogOpen(false);
+    setDocumentTypeToDelete(null);
+  };
+
   const handleSendInvite = async (email: string, role: string) => {
     if (!company || !user) return;
 
@@ -242,7 +281,7 @@ export default function Settings() {
       />
 
       <Tabs defaultValue="company" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:grid-cols-5">
+        <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:grid-cols-6">
           <TabsTrigger value="company" className="gap-2">
             <Building2 className="h-4 w-4" />
             <span className="hidden sm:inline">Empresa</span>
@@ -258,6 +297,10 @@ export default function Settings() {
           <TabsTrigger value="templates" className="gap-2">
             <FileText className="h-4 w-4" />
             <span className="hidden sm:inline">Templates</span>
+          </TabsTrigger>
+          <TabsTrigger value="types" className="gap-2">
+            <Tags className="h-4 w-4" />
+            <span className="hidden sm:inline">Tipos</span>
           </TabsTrigger>
           <TabsTrigger value="parameters" className="gap-2">
             <SettingsIcon className="h-4 w-4" />
@@ -648,6 +691,81 @@ export default function Settings() {
           </Card>
         </TabsContent>
 
+        {/* Document Types Tab */}
+        <TabsContent value="types">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Tipos de Documento</CardTitle>
+                <CardDescription>Cadastre e gerencie os tipos usados nos documentos</CardDescription>
+              </div>
+              <Button onClick={handleNewDocumentType}>
+                <Plus className="mr-2 h-4 w-4" />
+                Novo Tipo
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {documentTypesLoading ? (
+                <div className="flex h-32 items-center justify-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[120px]">Código</TableHead>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Descrição</TableHead>
+                      <TableHead className="w-[120px]">Cor</TableHead>
+                      <TableHead className="w-[50px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {documentTypes?.map((type) => (
+                      <TableRow key={type.id}>
+                        <TableCell>
+                          <Badge variant="outline" className={type.color || ""}>
+                            {type.code}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-medium">{type.name}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {type.description || "-"}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {type.color || "-"}
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleEditDocumentType(type)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={() => handleDeleteDocumentTypeClick(type)}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Excluir
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* Parameters Tab */}
         <TabsContent value="parameters">
           <div className="grid gap-6 lg:grid-cols-2">
@@ -782,6 +900,23 @@ export default function Settings() {
         onOpenChange={setInviteDialogOpen}
         onSubmit={handleSendInvite}
         isSubmitting={sendInvitation.isPending}
+      />
+
+      {/* Document Type Dialogs */}
+      <DocumentTypeFormDialog
+        open={documentTypeDialogOpen}
+        onOpenChange={setDocumentTypeDialogOpen}
+        documentType={selectedDocumentType}
+        onSubmit={handleDocumentTypeSubmit}
+        isSubmitting={addDocumentType.isPending || updateDocumentType.isPending}
+      />
+
+      <DeleteDocumentTypeDialog
+        open={deleteDocumentTypeDialogOpen}
+        onOpenChange={setDeleteDocumentTypeDialogOpen}
+        typeName={documentTypeToDelete?.name || ""}
+        onConfirm={handleDeleteDocumentTypeConfirm}
+        isDeleting={deleteDocumentType.isPending}
       />
     </AppLayout>
   );

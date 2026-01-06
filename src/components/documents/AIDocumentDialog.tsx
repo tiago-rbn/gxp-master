@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -31,6 +31,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useDocumentTypes, defaultDocumentTypes } from "@/hooks/useDocumentTypes";
 
 const formSchema = z.object({
   documentType: z.string().min(1, "Selecione um tipo de documento"),
@@ -47,20 +48,11 @@ interface AIDocumentDialogProps {
   onUseContent?: (content: string, documentType: string) => void;
 }
 
-const documentTypes = [
-  { value: "URS", label: "URS - Especificação de Requisitos do Usuário" },
-  { value: "PV", label: "PV - Plano de Validação" },
-  { value: "IQ", label: "IQ - Qualificação de Instalação" },
-  { value: "OQ", label: "OQ - Qualificação Operacional" },
-  { value: "PQ", label: "PQ - Qualificação de Performance" },
-  { value: "RA", label: "RA - Avaliação de Risco" },
-  { value: "SOP", label: "SOP - Procedimento Operacional Padrão" },
-];
-
 export function AIDocumentDialog({ open, onOpenChange, onUseContent }: AIDocumentDialogProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedContent, setGeneratedContent] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const { documentTypes } = useDocumentTypes();
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -71,6 +63,13 @@ export function AIDocumentDialog({ open, onOpenChange, onUseContent }: AIDocumen
       additionalContext: "",
     },
   });
+
+  useEffect(() => {
+    const availableTypes = documentTypes?.length ? documentTypes : defaultDocumentTypes;
+    if (!form.getValues("documentType") && availableTypes[0]) {
+      form.setValue("documentType", availableTypes[0].code);
+    }
+  }, [documentTypes, form]);
 
   const onSubmit = async (data: FormData) => {
     setIsGenerating(true);
@@ -155,9 +154,9 @@ export function AIDocumentDialog({ open, onOpenChange, onUseContent }: AIDocumen
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {documentTypes.map((type) => (
-                            <SelectItem key={type.value} value={type.value}>
-                              {type.label}
+                          {(documentTypes?.length ? documentTypes : defaultDocumentTypes).map((type) => (
+                            <SelectItem key={type.id} value={type.code}>
+                              {type.code} - {type.name}
                             </SelectItem>
                           ))}
                         </SelectContent>

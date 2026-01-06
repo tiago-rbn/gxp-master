@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useDocumentTypes } from "@/hooks/useDocumentTypes";
 
 interface TemplateFormDialogProps {
   open: boolean;
@@ -48,6 +49,7 @@ export function TemplateFormDialog({
   isSubmitting,
   companyId,
 }: TemplateFormDialogProps) {
+  const { documentTypes } = useDocumentTypes();
   const [formData, setFormData] = useState({
     name: "",
     document_type: "URS",
@@ -68,13 +70,13 @@ export function TemplateFormDialog({
     } else {
       setFormData({
         name: "",
-        document_type: "URS",
+        document_type: documentTypes?.[0]?.code || "URS",
         version: "1.0",
         content: "",
         is_active: true,
       });
     }
-  }, [template, open]);
+  }, [template, open, documentTypes]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,9 +137,9 @@ export function TemplateFormDialog({
                   <SelectValue placeholder="Selecione o tipo" />
                 </SelectTrigger>
                 <SelectContent>
-                  {documentTypes.map((type) => (
-                    <SelectItem key={type.value} value={type.value}>
-                      {type.label}
+                  {(documentTypes || []).map((type) => (
+                    <SelectItem key={type.id} value={type.code}>
+                      {type.code} - {type.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
