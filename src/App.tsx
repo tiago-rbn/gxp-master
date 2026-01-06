@@ -13,6 +13,7 @@ import Projects from "./pages/Projects";
 import Documents from "./pages/Documents";
 import Changes from "./pages/Changes";
 import Settings from "./pages/Settings";
+import AcceptInvite from "./pages/AcceptInvite";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +28,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/accept-invite" element={<AcceptInvite />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/systems" element={<ProtectedRoute><Systems /></ProtectedRoute>} />
             <Route path="/risks" element={<ProtectedRoute><Risks /></ProtectedRoute>} />
