@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/table";
 import { useCompanies, Company } from "@/hooks/useCompanies";
 import { CompanyFormDialog } from "@/components/companies/CompanyFormDialog";
+import { CompanyUsersDialog } from "@/components/companies/CompanyUsersDialog";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Navigate } from "react-router-dom";
@@ -24,6 +25,7 @@ export default function Companies() {
   const { companies, isLoading, isSuperAdmin, createCompany, updateCompany } = useCompanies();
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [usersDialogOpen, setUsersDialogOpen] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
 
   // Redirect if not super_admin
@@ -45,6 +47,11 @@ export default function Companies() {
   const handleEditCompany = (company: Company) => {
     setSelectedCompany(company);
     setDialogOpen(true);
+  };
+
+  const handleManageUsers = (company: Company) => {
+    setSelectedCompany(company);
+    setUsersDialogOpen(true);
   };
 
   const handleSubmit = async (data: { name: string; cnpj?: string; address?: string; phone?: string }) => {
@@ -128,7 +135,7 @@ export default function Companies() {
                   <TableHead>CNPJ</TableHead>
                   <TableHead>Usuários</TableHead>
                   <TableHead>Criada em</TableHead>
-                  <TableHead className="w-[100px]">Ações</TableHead>
+                  <TableHead className="w-[150px]">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -169,13 +176,24 @@ export default function Companies() {
                         {format(new Date(company.created_at), "dd/MM/yyyy", { locale: ptBR })}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditCompany(company)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleManageUsers(company)}
+                            title="Gerenciar Usuários"
+                          >
+                            <Users className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditCompany(company)}
+                            title="Editar Empresa"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -192,6 +210,12 @@ export default function Companies() {
         company={selectedCompany}
         onSubmit={handleSubmit}
         isSubmitting={createCompany.isPending || updateCompany.isPending}
+      />
+
+      <CompanyUsersDialog
+        open={usersDialogOpen}
+        onOpenChange={setUsersDialogOpen}
+        company={selectedCompany}
       />
     </AppLayout>
   );
