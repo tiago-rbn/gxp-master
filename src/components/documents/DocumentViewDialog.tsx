@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FileText, Download, Loader2 } from "lucide-react";
+import { FileText, Download, Loader2, FileDown } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { exportDocumentToPDF } from "@/lib/pdfExport";
+import { toast } from "sonner";
 import type { Database } from "@/integrations/supabase/types";
 
 type Document = Database["public"]["Tables"]["documents"]["Row"] & {
@@ -65,6 +67,7 @@ export function DocumentViewDialog({
   onEdit,
 }: DocumentViewDialogProps) {
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   if (!document) return null;
 
@@ -82,8 +85,22 @@ export function DocumentViewDialog({
       window.open(data.signedUrl, '_blank');
     } catch (error) {
       console.error('Download error:', error);
+      toast.error("Erro ao baixar arquivo");
     } finally {
       setIsDownloading(false);
+    }
+  };
+
+  const handleExportPDF = () => {
+    setIsExporting(true);
+    try {
+      exportDocumentToPDF(document);
+      toast.success("PDF exportado com sucesso!");
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error("Erro ao exportar PDF");
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -191,11 +208,26 @@ export function DocumentViewDialog({
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Fechar
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleExportPDF}
+            disabled={isExporting}
+            className="w-full sm:w-auto"
+          >
+            {isExporting ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <FileDown className="mr-2 h-4 w-4" />
+            )}
+            Exportar PDF
           </Button>
-          <Button onClick={onEdit}>Editar Documento</Button>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Fechar
+            </Button>
+            <Button onClick={onEdit}>Editar</Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
