@@ -9,6 +9,7 @@ import {
   Settings,
   Shield,
   ChevronLeft,
+  Building2,
 } from "lucide-react";
 import {
   Sidebar,
@@ -25,6 +26,9 @@ import {
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const mainMenuItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -39,10 +43,29 @@ const configMenuItems = [
   { title: "Configurações", url: "/settings", icon: Settings },
 ];
 
+const superAdminMenuItems = [
+  { title: "Empresas", url: "/companies", icon: Building2 },
+];
+
 export function AppSidebar() {
   const location = useLocation();
   const { state, toggleSidebar } = useSidebar();
+  const { user } = useAuth();
   const isCollapsed = state === "collapsed";
+
+  const { data: isSuperAdmin } = useQuery({
+    queryKey: ["is-super-admin", user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user!.id)
+        .eq("role", "super_admin")
+        .maybeSingle();
+      return !!data;
+    },
+    enabled: !!user,
+  });
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -124,6 +147,40 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {isSuperAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-sidebar-foreground/50">
+              {!isCollapsed && "Super Admin"}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {superAdminMenuItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.pathname === item.url}
+                      tooltip={item.title}
+                    >
+                      <NavLink
+                        to={item.url}
+                        className={cn(
+                          "flex items-center gap-3 rounded-lg px-3 py-2 transition-colors",
+                          location.pathname === item.url
+                            ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                            : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                        )}
+                      >
+                        <item.icon className="h-5 w-5 shrink-0" />
+                        {!isCollapsed && <span>{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-2">
