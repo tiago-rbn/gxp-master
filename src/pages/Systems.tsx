@@ -50,6 +50,7 @@ const validationStatusLabels: Record<string, string> = {
   in_progress: "Em Andamento",
   validated: "Validado",
   expired: "Expirado",
+  pending_revalidation: "Revalidação Pendente",
 };
 
 const validationStatusColors: Record<string, string> = {
@@ -57,12 +58,14 @@ const validationStatusColors: Record<string, string> = {
   in_progress: "bg-warning/10 text-warning border-warning/20",
   validated: "bg-success/10 text-success border-success/20",
   expired: "bg-destructive/10 text-destructive border-destructive/20",
+  pending_revalidation: "bg-orange-500/10 text-orange-600 border-orange-500/20",
 };
 
 const criticalityConfig: Record<string, { label: string; className: string }> = {
   low: { label: "Baixa", className: "border-success/20 bg-success/10 text-success" },
   medium: { label: "Média", className: "border-warning/20 bg-warning/10 text-warning" },
   high: { label: "Alta", className: "border-destructive/20 bg-destructive/10 text-destructive" },
+  critical: { label: "Crítica", className: "border-destructive/20 bg-destructive/10 text-destructive" },
 };
 
 export default function Systems() {
