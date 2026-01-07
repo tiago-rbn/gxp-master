@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Package, ListTodo, Plus, Edit, Trash2, MoreHorizontal, Loader2 } from "lucide-react";
+import { Package, ListTodo, Plus, Edit, Trash2, MoreHorizontal, Loader2, Download } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +57,7 @@ export function ProjectTemplatesTab() {
     addTemplate: addDeliverable,
     updateTemplate: updateDeliverable,
     deleteTemplate: deleteDeliverable,
+    loadDefaultTemplates: loadDefaultDeliverables,
   } = useDeliverableTemplates();
   
   const { 
@@ -65,7 +66,10 @@ export function ProjectTemplatesTab() {
     addTemplate: addTask,
     updateTemplate: updateTask,
     deleteTemplate: deleteTask,
+    loadDefaultTemplates: loadDefaultTasks,
   } = useTaskTemplates();
+
+  const [loadingDefaults, setLoadingDefaults] = useState(false);
 
   // Deliverable dialog states
   const [deliverableDialogOpen, setDeliverableDialogOpen] = useState(false);
@@ -143,6 +147,18 @@ export function ProjectTemplatesTab() {
     }
   };
 
+  const handleLoadDefaultTemplates = async () => {
+    setLoadingDefaults(true);
+    try {
+      await Promise.all([
+        loadDefaultDeliverables.mutateAsync(),
+        loadDefaultTasks.mutateAsync(),
+      ]);
+    } finally {
+      setLoadingDefaults(false);
+    }
+  };
+
   // Group templates by GAMP category
   const groupByGamp = <T extends { gamp_category: string }>(items: T[] | undefined): Record<string, T[]> => {
     if (!items) return {};
@@ -153,6 +169,7 @@ export function ProjectTemplatesTab() {
       return acc;
     }, {} as Record<string, T[]>);
   };
+  };
 
   const deliverablesByGamp = groupByGamp(deliverableTemplates);
   const tasksByGamp = groupByGamp(taskTemplates);
@@ -160,10 +177,26 @@ export function ProjectTemplatesTab() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Templates de Projetos</CardTitle>
-        <CardDescription>
-          Configure os templates de entregáveis e tarefas por categoria GAMP
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>Templates de Projetos</CardTitle>
+            <CardDescription>
+              Configure os templates de entregáveis e tarefas por categoria GAMP
+            </CardDescription>
+          </div>
+          <Button 
+            variant="outline" 
+            onClick={handleLoadDefaultTemplates}
+            disabled={loadingDefaults}
+          >
+            {loadingDefaults ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-4 w-4" />
+            )}
+            Carregar Templates Padrão
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="deliverables" className="space-y-4">

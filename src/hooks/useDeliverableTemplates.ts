@@ -108,11 +108,37 @@ export function useDeliverableTemplates() {
     },
   });
 
+  const loadDefaultTemplates = useMutation({
+    mutationFn: async () => {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("company_id")
+        .eq("id", user!.id)
+        .single();
+
+      if (!profile?.company_id) throw new Error("Empresa não encontrada");
+
+      const { error } = await supabase.rpc("populate_default_deliverable_templates", {
+        _company_id: profile.company_id,
+      });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["deliverable-templates"] });
+      toast.success("Templates padrão carregados com sucesso");
+    },
+    onError: (error) => {
+      toast.error("Erro ao carregar templates: " + error.message);
+    },
+  });
+
   return {
     templates,
     isLoading,
     addTemplate,
     updateTemplate,
     deleteTemplate,
+    loadDefaultTemplates,
   };
 }
