@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,11 +13,25 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RiskIndicator } from "@/components/shared/RiskIndicator";
+import { useRiskRequirementLinks, useRiskTestCaseLinks } from "@/hooks/useRiskLinks";
+import { useRequirements } from "@/hooks/useRequirements";
+import { useTestCases } from "@/hooks/useTestCases";
+import { useUserCompanies } from "@/hooks/useUserCompanies";
+import { Plus, X, FileText, TestTube2 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { Database } from "@/integrations/supabase/types";
 
 type RiskAssessment = Database["public"]["Tables"]["risk_assessments"]["Row"] & {
   system?: { name: string } | null;
   assessor?: { full_name: string } | null;
+  approver?: { full_name: string } | null;
+  reviewer?: { full_name: string } | null;
 };
 
 interface RiskViewDialogProps {
@@ -44,7 +59,6 @@ const riskLevelToOldFormat: Record<string, "High" | "Medium" | "Low"> = {
 
 // Risk Matrix Component
 function RiskMatrix({ probability, severity }: { probability: number; severity: number }) {
-  // Convert 1-10 scale to 1-3 for matrix display
   const probLevel = Math.ceil(probability / 3.33);
   const sevLevel = Math.ceil(severity / 3.33);
   
@@ -88,14 +102,51 @@ export function RiskViewDialog({
   risk,
   onEdit,
 }: RiskViewDialogProps) {
+  const { activeCompany } = useUserCompanies();
+  const { links: requirementLinks, addLink: addRequirementLink, removeLink: removeRequirementLink } = useRiskRequirementLinks(risk?.id);
+  const { links: testCaseLinks, addLink: addTestCaseLink, removeLink: removeTestCaseLink } = useRiskTestCaseLinks(risk?.id);
+  const { requirements } = useRequirements();
+  const { testCases } = useTestCases();
+
+  const [selectedRequirement, setSelectedRequirement] = useState("");
+  const [selectedTestCase, setSelectedTestCase] = useState("");
+
   if (!risk) return null;
 
   const riskLevel = riskLevelToOldFormat[risk.risk_level || "low"];
   const residualLevel = riskLevelToOldFormat[risk.residual_risk || "low"];
 
+  const linkedRequirementIds = requirementLinks.map((l: any) => l.requirement_id);
+  const linkedTestCaseIds = testCaseLinks.map((l: any) => l.test_case_id);
+
+  const availableRequirements = requirements.filter((r) => !linkedRequirementIds.includes(r.id));
+  const availableTestCases = testCases.filter((t) => !linkedTestCaseIds.includes(t.id));
+
+  const handleAddRequirement = () => {
+    if (selectedRequirement && activeCompany?.id) {
+      addRequirementLink.mutate({
+        riskId: risk.id,
+        requirementId: selectedRequirement,
+        companyId: activeCompany.id,
+      });
+      setSelectedRequirement("");
+    }
+  };
+
+  const handleAddTestCase = () => {
+    if (selectedTestCase && activeCompany?.id) {
+      addTestCaseLink.mutate({
+        riskId: risk.id,
+        testCaseId: selectedTestCase,
+        companyId: activeCompany.id,
+      });
+      setSelectedTestCase("");
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{risk.title}</DialogTitle>
           <DialogDescription>
@@ -108,10 +159,12 @@ export function RiskViewDialog({
         </DialogHeader>
 
         <Tabs defaultValue="details" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="details">Detalhes</TabsTrigger>
-            <TabsTrigger value="matrix">Matriz de Risco</TabsTrigger>
-            <TabsTrigger value="controls">Controles</TabsTrigger>
+            <TabsTrigger value="team">Responsáveis</TabsTrigger>
+            <TabsTrigger value="requirements">Requisitos</TabsTrigger>
+            <TabsTrigger value="testcases">Casos de Teste</TabsTrigger>
+            <TabsTrigger value="matrix">Matriz</TabsTrigger>
           </TabsList>
 
           <TabsContent value="details" className="space-y-4 pt-4">
@@ -160,8 +213,10 @@ export function RiskViewDialog({
                 </div>
               </div>
               <div>
-                <Label className="text-muted-foreground">Avaliador</Label>
-                <p className="font-medium mt-1">{risk.assessor?.full_name || "-"}</p>
+                <Label className="text-muted-foreground">Risco Residual</Label>
+                <div className="mt-1">
+                  <RiskIndicator level={residualLevel} size="lg" />
+                </div>
               </div>
             </div>
 
@@ -171,6 +226,157 @@ export function RiskViewDialog({
                 <p className="mt-1 rounded-lg bg-muted p-3">{risk.description}</p>
               </div>
             )}
+
+            {risk.controls && (
+              <div className="pt-4">
+                <Label className="text-muted-foreground">Controles Implementados</Label>
+                <p className="mt-1 rounded-lg bg-muted p-3">{risk.controls}</p>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="team" className="space-y-4 pt-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Risk Owner (Responsável)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="font-medium">{risk.assessor?.full_name || "Não definido"}</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Aprovador</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="font-medium">{risk.approver?.full_name || "Não definido"}</p>
+                  {(risk as any).approved_at && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Aprovado em: {new Date((risk as any).approved_at).toLocaleDateString("pt-BR")}
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Revisor</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="font-medium">{risk.reviewer?.full_name || "Não definido"}</p>
+                  {(risk as any).reviewed_at && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Revisado em: {new Date((risk as any).reviewed_at).toLocaleDateString("pt-BR")}
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="requirements" className="space-y-4 pt-4">
+            <div className="flex gap-2">
+              <Select value={selectedRequirement} onValueChange={setSelectedRequirement}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Selecione um requisito para vincular..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableRequirements.map((req) => (
+                    <SelectItem key={req.id} value={req.id}>
+                      {req.code} - {req.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button onClick={handleAddRequirement} disabled={!selectedRequirement}>
+                <Plus className="h-4 w-4 mr-1" />
+                Vincular
+              </Button>
+            </div>
+
+            <div className="space-y-2">
+              {requirementLinks.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                  <FileText className="h-8 w-8 mb-2" />
+                  <p>Nenhum requisito vinculado a este risco</p>
+                </div>
+              ) : (
+                requirementLinks.map((link: any) => (
+                  <Card key={link.id}>
+                    <CardContent className="flex items-center justify-between p-3">
+                      <div>
+                        <Badge variant="outline" className="mr-2">{link.requirement?.code}</Badge>
+                        <span className="font-medium">{link.requirement?.title}</span>
+                        <Badge variant="secondary" className="ml-2">{link.requirement?.type}</Badge>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeRequirementLink.mutate(link.id)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="testcases" className="space-y-4 pt-4">
+            <div className="flex gap-2">
+              <Select value={selectedTestCase} onValueChange={setSelectedTestCase}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Selecione um caso de teste para vincular..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableTestCases.map((tc) => (
+                    <SelectItem key={tc.id} value={tc.id}>
+                      {tc.code} - {tc.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button onClick={handleAddTestCase} disabled={!selectedTestCase}>
+                <Plus className="h-4 w-4 mr-1" />
+                Vincular
+              </Button>
+            </div>
+
+            <div className="space-y-2">
+              {testCaseLinks.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                  <TestTube2 className="h-8 w-8 mb-2" />
+                  <p>Nenhum caso de teste vinculado a este risco</p>
+                </div>
+              ) : (
+                testCaseLinks.map((link: any) => (
+                  <Card key={link.id}>
+                    <CardContent className="flex items-center justify-between p-3">
+                      <div>
+                        <Badge variant="outline" className="mr-2">{link.test_case?.code}</Badge>
+                        <span className="font-medium">{link.test_case?.title}</span>
+                        <Badge 
+                          variant={link.test_case?.status === "passed" ? "default" : "secondary"} 
+                          className="ml-2"
+                        >
+                          {link.test_case?.status || "Pendente"}
+                        </Badge>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeTestCaseLink.mutate(link.id)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
           </TabsContent>
 
           <TabsContent value="matrix" className="pt-4">
@@ -198,23 +404,6 @@ export function RiskViewDialog({
                 <div className="flex items-center gap-2">
                   <div className="h-4 w-4 rounded bg-risk-high/20" />
                   <span>Alto</span>
-                </div>
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="controls" className="space-y-4 pt-4">
-            <div>
-              <Label className="text-muted-foreground">Controles Implementados</Label>
-              <p className="mt-1 rounded-lg bg-muted p-3">
-                {risk.controls || "Nenhum controle registrado"}
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div>
-                <Label className="text-muted-foreground">Risco Residual</Label>
-                <div className="mt-1">
-                  <RiskIndicator level={residualLevel} size="lg" />
                 </div>
               </div>
             </div>
