@@ -563,39 +563,76 @@ export function RiskFormDialog({
                 </Button>
               </div>
 
-              {/* Quick Add Tags */}
-              <div className="flex flex-wrap gap-2">
-                {systems.slice(0, 3).map((system) => (
-                  <Button
-                    key={system.id}
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-xs"
-                    onClick={() => handleAddSystemTag(system.name)}
-                    disabled={tags.includes(`sistema:${system.name}`)}
-                  >
-                    + {system.name}
-                  </Button>
-                ))}
-                {projects.slice(0, 3).map((project) => (
-                  <Button
-                    key={project.id}
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-xs"
-                    onClick={() => handleAddProjectTag(project.name)}
-                    disabled={tags.includes(`projeto:${project.name}`)}
-                  >
-                    + {project.name}
-                  </Button>
-                ))}
-              </div>
+              {/* Quick Add Tags - Sistemas */}
+              {systems.length > 0 && (
+                <div className="space-y-1">
+                  <span className="text-xs font-medium text-muted-foreground">Sistemas:</span>
+                  <div className="flex flex-wrap gap-1">
+                    {systems.map((system) => (
+                      <Button
+                        key={system.id}
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-xs px-2"
+                        onClick={() => handleAddSystemTag(system.name)}
+                        disabled={tags.includes(`sistema:${system.name}`)}
+                      >
+                        + {system.name}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Quick Add Tags - Projetos */}
+              {projects.length > 0 && (
+                <div className="space-y-1">
+                  <span className="text-xs font-medium text-muted-foreground">Projetos:</span>
+                  <div className="flex flex-wrap gap-1">
+                    {projects.map((project) => (
+                      <Button
+                        key={project.id}
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-xs px-2"
+                        onClick={() => handleAddProjectTag(project.name)}
+                        disabled={tags.includes(`projeto:${project.name}`)}
+                      >
+                        + {project.name}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Quick Add Tags - Controles de Mudança */}
+              {changeRequests.length > 0 && (
+                <div className="space-y-1">
+                  <span className="text-xs font-medium text-muted-foreground">Controles de Mudança:</span>
+                  <div className="flex flex-wrap gap-1">
+                    {changeRequests.map((change) => (
+                      <Button
+                        key={change.id}
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-xs px-2"
+                        onClick={() => handleAddChangeTag(change.title)}
+                        disabled={tags.includes(`mudança:${change.title}`)}
+                      >
+                        + {change.title.length > 20 ? change.title.substring(0, 20) + '...' : change.title}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Current Tags */}
               {tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 pt-2">
+                <div className="flex flex-wrap gap-2 pt-2 border-t">
+                  <span className="text-xs font-medium text-muted-foreground w-full mb-1">Tags selecionadas:</span>
                   {tags.map((tag) => (
                     <Badge key={tag} variant="secondary" className="gap-1">
                       {tag}
