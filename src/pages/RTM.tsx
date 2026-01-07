@@ -4,6 +4,7 @@ import { useTestCases, TestCase } from "@/hooks/useTestCases";
 import { useRTM } from "@/hooks/useRTM";
 import { useSystemsForSelect } from "@/hooks/useRiskAssessments";
 import { useValidationProjects } from "@/hooks/useValidationProjects";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -238,11 +239,12 @@ export default function RTM() {
   const isLoading = reqLoading || testLoading || rtmLoading;
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Matriz de Rastreabilidade (RTM)"
-        description="Gerencie requisitos, casos de teste e rastreabilidade"
-      />
+    <AppLayout>
+      <div className="space-y-6">
+        <PageHeader
+          title="Matriz de Rastreabilidade (RTM)"
+          description="Gerencie requisitos, casos de teste e rastreabilidade"
+        />
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -846,5 +848,6 @@ export default function RTM() {
         </DialogContent>
       </Dialog>
     </div>
+    </AppLayout>
   );
 }
