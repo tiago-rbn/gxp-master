@@ -56,15 +56,17 @@ export function useInvitations() {
       companyId,
       companyName,
       inviterName,
+      companyLogoUrl,
     }: {
       email: string;
       role: string;
       companyId: string;
       companyName: string;
       inviterName: string;
+      companyLogoUrl?: string;
     }) => {
       const { data, error } = await supabase.functions.invoke("send-invitation", {
-        body: { email, role, companyId, companyName, inviterName },
+        body: { email, role, companyId, companyName, inviterName, companyLogoUrl },
       });
 
       if (error) throw error;
@@ -109,13 +111,13 @@ export function useInvitations() {
       // Get company info
       const { data: profile } = await supabase
         .from("profiles")
-        .select("company_id, full_name, companies(name)")
+        .select("company_id, full_name, companies(name, logo_url)")
         .eq("id", user!.id)
         .single();
 
       if (!profile) throw new Error("Perfil não encontrado");
 
-      const companyData = profile.companies as unknown as { name: string };
+      const companyData = profile.companies as unknown as { name: string; logo_url: string | null };
 
       // Send new invitation
       const { data, error } = await supabase.functions.invoke("send-invitation", {
@@ -125,6 +127,7 @@ export function useInvitations() {
           companyId: profile.company_id,
           companyName: companyData?.name || "Empresa",
           inviterName: profile.full_name,
+          companyLogoUrl: companyData?.logo_url,
         },
       });
 

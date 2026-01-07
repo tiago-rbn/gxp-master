@@ -40,6 +40,8 @@ interface NotificationRequest {
   manager_email?: string;
   manager_name?: string;
   rejection_reason?: string;
+  company_name?: string;
+  company_logo_url?: string;
 }
 
 const statusLabels: Record<string, string> = {
@@ -83,6 +85,7 @@ const getEmailSubject = (status: string, projectName: string): string => {
 const generateEmailHtml = (data: NotificationRequest): string => {
   const statusColor = getStatusColor(data.new_status);
   const statusLabel = statusLabels[data.new_status] || data.new_status;
+  const companyName = data.company_name || "CSV System";
 
   let actionText = "";
   if (data.new_status === "pending") {
@@ -103,6 +106,11 @@ const generateEmailHtml = (data: NotificationRequest): string => {
     <p>Parabéns pela conclusão do projeto!</p>`;
   }
 
+  // Build header with optional company logo
+  const logoHtml = data.company_logo_url 
+    ? `<img src="${data.company_logo_url}" alt="${companyName}" style="max-height: 50px; max-width: 150px; margin-bottom: 12px; border-radius: 4px;" />`
+    : "";
+
   return `
 <!DOCTYPE html>
 <html>
@@ -111,8 +119,9 @@ const generateEmailHtml = (data: NotificationRequest): string => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); padding: 24px; border-radius: 8px 8px 0 0;">
-    <h1 style="color: white; margin: 0; font-size: 24px;">CSV System</h1>
+  <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); padding: 24px; border-radius: 8px 8px 0 0; text-align: center;">
+    ${logoHtml}
+    <h1 style="color: white; margin: 0; font-size: 24px;">${companyName}</h1>
     <p style="color: rgba(255,255,255,0.8); margin: 4px 0 0 0; font-size: 14px;">Sistema de Validação GAMP 5</p>
   </div>
   
@@ -127,14 +136,14 @@ const generateEmailHtml = (data: NotificationRequest): string => {
       <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
       
       <p style="font-size: 14px; color: #6b7280; margin-bottom: 0;">
-        Esta é uma notificação automática do sistema CSV System.
+        Esta é uma notificação automática do sistema ${companyName}.
       </p>
     </div>
   </div>
   
   <div style="background-color: #1e3a5f; padding: 16px 24px; border-radius: 0 0 8px 8px;">
     <p style="color: rgba(255,255,255,0.7); font-size: 12px; margin: 0; text-align: center;">
-      © ${new Date().getFullYear()} CSV System - Sistema de Validação GAMP 5
+      © ${new Date().getFullYear()} ${companyName} - Sistema de Validação GAMP 5
     </p>
   </div>
 </body>

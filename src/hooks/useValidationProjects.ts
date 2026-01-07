@@ -19,6 +19,8 @@ async function sendProjectNotification(data: {
   manager_email?: string;
   manager_name?: string;
   rejection_reason?: string;
+  company_name?: string;
+  company_logo_url?: string;
 }) {
   try {
     const response = await supabase.functions.invoke("notify-project-status", {
@@ -151,7 +153,8 @@ export function useValidationProjects() {
         .from("validation_projects")
         .select(`
           *,
-          manager:profiles!validation_projects_manager_id_fkey(full_name, email)
+          manager:profiles!validation_projects_manager_id_fkey(full_name, email),
+          company:companies(name, logo_url)
         `)
         .eq("id", id)
         .single();
@@ -174,6 +177,8 @@ export function useValidationProjects() {
         .eq("id", user!.id)
         .single();
 
+      const companyData = project.company as unknown as { name: string; logo_url: string | null } | null;
+
       // Send notification
       sendProjectNotification({
         project_id: id,
@@ -184,6 +189,8 @@ export function useValidationProjects() {
         action_by_email: userProfile?.email || "",
         manager_email: project.manager?.email,
         manager_name: project.manager?.full_name,
+        company_name: companyData?.name,
+        company_logo_url: companyData?.logo_url || undefined,
       });
 
       return data;
@@ -206,7 +213,8 @@ export function useValidationProjects() {
         .from("validation_projects")
         .select(`
           *,
-          manager:profiles!validation_projects_manager_id_fkey(full_name, email)
+          manager:profiles!validation_projects_manager_id_fkey(full_name, email),
+          company:companies(name, logo_url)
         `)
         .eq("id", id)
         .single();
@@ -234,6 +242,8 @@ export function useValidationProjects() {
         .eq("id", user!.id)
         .single();
 
+      const companyData = project.company as unknown as { name: string; logo_url: string | null } | null;
+
       // Send notification
       sendProjectNotification({
         project_id: id,
@@ -244,6 +254,8 @@ export function useValidationProjects() {
         action_by_email: userProfile?.email || "",
         manager_email: project.manager?.email,
         manager_name: project.manager?.full_name,
+        company_name: companyData?.name,
+        company_logo_url: companyData?.logo_url || undefined,
       });
 
       return data;
@@ -266,7 +278,8 @@ export function useValidationProjects() {
         .from("validation_projects")
         .select(`
           *,
-          manager:profiles!validation_projects_manager_id_fkey(full_name, email)
+          manager:profiles!validation_projects_manager_id_fkey(full_name, email),
+          company:companies(name, logo_url)
         `)
         .eq("id", id)
         .single();
@@ -294,6 +307,8 @@ export function useValidationProjects() {
         .eq("id", user!.id)
         .single();
 
+      const companyData = project.company as unknown as { name: string; logo_url: string | null } | null;
+
       // Send notification
       sendProjectNotification({
         project_id: id,
@@ -305,6 +320,8 @@ export function useValidationProjects() {
         manager_email: project.manager?.email,
         manager_name: project.manager?.full_name,
         rejection_reason: reason,
+        company_name: companyData?.name,
+        company_logo_url: companyData?.logo_url || undefined,
       });
 
       return data;
@@ -327,7 +344,8 @@ export function useValidationProjects() {
         .from("validation_projects")
         .select(`
           *,
-          manager:profiles!validation_projects_manager_id_fkey(full_name, email)
+          manager:profiles!validation_projects_manager_id_fkey(full_name, email),
+          company:companies(name, logo_url)
         `)
         .eq("id", id)
         .single();
@@ -354,6 +372,8 @@ export function useValidationProjects() {
         .eq("id", user!.id)
         .single();
 
+      const companyData = project.company as unknown as { name: string; logo_url: string | null } | null;
+
       // Send notification
       sendProjectNotification({
         project_id: id,
@@ -364,6 +384,8 @@ export function useValidationProjects() {
         action_by_email: userProfile?.email || "",
         manager_email: project.manager?.email,
         manager_name: project.manager?.full_name,
+        company_name: companyData?.name,
+        company_logo_url: companyData?.logo_url || undefined,
       });
 
       return data;
