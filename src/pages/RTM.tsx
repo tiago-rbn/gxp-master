@@ -318,12 +318,10 @@ export default function RTM() {
                   icon={FileText}
                   title="Nenhum requisito encontrado"
                   description="Crie seu primeiro requisito para começar"
-                  action={
-                    <Button onClick={() => { resetReqForm(); setReqDialogOpen(true); }}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Novo Requisito
-                    </Button>
-                  }
+                  action={{
+                    label: "Novo Requisito",
+                    onClick: () => { resetReqForm(); setReqDialogOpen(true); }
+                  }}
                 />
               ) : (
                 <Table>
@@ -381,12 +379,10 @@ export default function RTM() {
                   icon={FlaskConical}
                   title="Nenhum caso de teste encontrado"
                   description="Crie seu primeiro caso de teste"
-                  action={
-                    <Button onClick={() => { resetTestForm(); setTestDialogOpen(true); }}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Novo Caso de Teste
-                    </Button>
-                  }
+                  action={{
+                    label: "Novo Caso de Teste",
+                    onClick: () => { resetTestForm(); setTestDialogOpen(true); }
+                  }}
                 />
               ) : (
                 <Table>
@@ -460,12 +456,10 @@ export default function RTM() {
                   icon={Link2}
                   title="Nenhum link encontrado"
                   description="Crie links entre requisitos e casos de teste"
-                  action={
-                    <Button onClick={() => setLinkDialogOpen(true)}>
-                      <Link2 className="h-4 w-4 mr-2" />
-                      Criar Link
-                    </Button>
-                  }
+                  action={{
+                    label: "Criar Link",
+                    onClick: () => setLinkDialogOpen(true)
+                  }}
                 />
               ) : (
                 <Table>
