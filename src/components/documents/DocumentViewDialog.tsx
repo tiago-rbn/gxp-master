@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FileText, Download, Loader2, FileDown, History } from "lucide-react";
 import {
   Dialog,
@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import type { Database } from "@/integrations/supabase/types";
 import { DocumentVersionHistory } from "./DocumentVersionHistory";
 import { useDocuments } from "@/hooks/useDocuments";
+import { useUserCompanies } from "@/hooks/useUserCompanies";
 
 type Document = Database["public"]["Tables"]["documents"]["Row"] & {
   system?: { name: string } | null;
@@ -68,12 +69,37 @@ export function DocumentViewDialog({
   document,
   onEdit,
 }: DocumentViewDialogProps) {
+  const { activeCompany } = useUserCompanies();
   const [isDownloading, setIsDownloading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [companyLogo, setCompanyLogo] = useState<string | null>(null);
   
   const { useDocumentVersions } = useDocuments();
   const { data: versions = [], isLoading: isLoadingVersions } = useDocumentVersions(document?.id || null);
+
+  // Load company logo
+  useEffect(() => {
+    const loadCompanyLogo = async () => {
+      if (activeCompany?.logo_url) {
+        try {
+          const { data } = await supabase.storage
+            .from('company-logos')
+            .createSignedUrl(activeCompany.logo_url, 60);
+          
+          if (data?.signedUrl) {
+            setCompanyLogo(data.signedUrl);
+          }
+        } catch (error) {
+          console.warn('Failed to load company logo:', error);
+        }
+      } else {
+        setCompanyLogo(null);
+      }
+    };
+    
+    loadCompanyLogo();
+  }, [activeCompany?.logo_url]);
 
   if (!document) return null;
 
@@ -97,10 +123,13 @@ export function DocumentViewDialog({
     }
   };
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     setIsExporting(true);
     try {
-      exportDocumentToPDF(document);
+      await exportDocumentToPDF(document, {
+        companyLogo,
+        companyName: activeCompany?.name,
+      });
       toast.success("PDF exportado com sucesso!");
     } catch (error) {
       console.error('Export error:', error);
