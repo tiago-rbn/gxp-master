@@ -726,6 +726,8 @@ export type Database = {
       }
       risk_assessments: {
         Row: {
+          approved_at: string | null
+          approver_id: string | null
           assessment_type: string
           assessor_id: string | null
           company_id: string
@@ -736,6 +738,8 @@ export type Database = {
           id: string
           probability: number | null
           residual_risk: Database["public"]["Enums"]["risk_level"] | null
+          reviewed_at: string | null
+          reviewer_id: string | null
           risk_level: Database["public"]["Enums"]["risk_level"] | null
           severity: number | null
           status: Database["public"]["Enums"]["status_type"] | null
@@ -744,6 +748,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          approved_at?: string | null
+          approver_id?: string | null
           assessment_type: string
           assessor_id?: string | null
           company_id: string
@@ -754,6 +760,8 @@ export type Database = {
           id?: string
           probability?: number | null
           residual_risk?: Database["public"]["Enums"]["risk_level"] | null
+          reviewed_at?: string | null
+          reviewer_id?: string | null
           risk_level?: Database["public"]["Enums"]["risk_level"] | null
           severity?: number | null
           status?: Database["public"]["Enums"]["status_type"] | null
@@ -762,6 +770,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          approved_at?: string | null
+          approver_id?: string | null
           assessment_type?: string
           assessor_id?: string | null
           company_id?: string
@@ -772,6 +782,8 @@ export type Database = {
           id?: string
           probability?: number | null
           residual_risk?: Database["public"]["Enums"]["risk_level"] | null
+          reviewed_at?: string | null
+          reviewer_id?: string | null
           risk_level?: Database["public"]["Enums"]["risk_level"] | null
           severity?: number | null
           status?: Database["public"]["Enums"]["status_type"] | null
@@ -780,6 +792,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "risk_assessments_approver_id_fkey"
+            columns: ["approver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "risk_assessments_assessor_id_fkey"
             columns: ["assessor_id"]
@@ -795,10 +814,109 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "risk_assessments_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "risk_assessments_system_id_fkey"
             columns: ["system_id"]
             isOneToOne: false
             referencedRelation: "systems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      risk_requirement_links: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          requirement_id: string
+          risk_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          requirement_id: string
+          risk_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          requirement_id?: string
+          risk_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_requirement_links_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_requirement_links_requirement_id_fkey"
+            columns: ["requirement_id"]
+            isOneToOne: false
+            referencedRelation: "requirements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_requirement_links_risk_id_fkey"
+            columns: ["risk_id"]
+            isOneToOne: false
+            referencedRelation: "risk_assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      risk_test_case_links: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          risk_id: string
+          test_case_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          risk_id: string
+          test_case_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          risk_id?: string
+          test_case_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_test_case_links_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_test_case_links_risk_id_fkey"
+            columns: ["risk_id"]
+            isOneToOne: false
+            referencedRelation: "risk_assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_test_case_links_test_case_id_fkey"
+            columns: ["test_case_id"]
+            isOneToOne: false
+            referencedRelation: "test_cases"
             referencedColumns: ["id"]
           },
         ]

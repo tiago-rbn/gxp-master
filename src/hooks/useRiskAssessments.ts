@@ -20,7 +20,9 @@ export function useRiskAssessments() {
         .select(`
           *,
           system:systems(name),
-          assessor:profiles!risk_assessments_assessor_id_fkey(full_name)
+          assessor:profiles!risk_assessments_assessor_id_fkey(full_name),
+          approver:profiles!risk_assessments_approver_id_fkey(full_name),
+          reviewer:profiles!risk_assessments_reviewer_id_fkey(full_name)
         `)
         .order("created_at", { ascending: false });
 

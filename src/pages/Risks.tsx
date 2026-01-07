@@ -37,6 +37,8 @@ import type { Database } from "@/integrations/supabase/types";
 type RiskAssessment = Database["public"]["Tables"]["risk_assessments"]["Row"] & {
   system?: { name: string } | null;
   assessor?: { full_name: string } | null;
+  approver?: { full_name: string } | null;
+  reviewer?: { full_name: string } | null;
 };
 
 const statusLabels: Record<string, string> = {
@@ -109,6 +111,8 @@ export default function Risks() {
       ...values,
       system_id: values.system_id || null,
       assessor_id: values.assessor_id || null,
+      approver_id: values.approver_id || null,
+      reviewer_id: values.reviewer_id || null,
     };
 
     if (selectedRisk) {

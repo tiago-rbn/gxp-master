@@ -48,6 +48,8 @@ const riskSchema = z.object({
   controls: z.string().optional(),
   status: z.enum(["draft", "pending", "approved", "rejected", "completed", "cancelled"]),
   assessor_id: z.string().optional(),
+  approver_id: z.string().optional(),
+  reviewer_id: z.string().optional(),
 });
 
 type RiskFormValues = z.infer<typeof riskSchema>;
@@ -93,6 +95,8 @@ export function RiskFormDialog({
       controls: "",
       status: "draft",
       assessor_id: "",
+      approver_id: "",
+      reviewer_id: "",
     },
   });
 
@@ -120,6 +124,8 @@ export function RiskFormDialog({
         controls: risk.controls || "",
         status: (risk.status as "draft" | "pending" | "approved" | "rejected" | "completed" | "cancelled") || "draft",
         assessor_id: risk.assessor_id || "",
+        approver_id: (risk as any).approver_id || "",
+        reviewer_id: (risk as any).reviewer_id || "",
       });
     } else {
       form.reset({
@@ -135,6 +141,8 @@ export function RiskFormDialog({
         controls: "",
         status: "draft",
         assessor_id: "",
+        approver_id: "",
+        reviewer_id: "",
       });
     }
   }, [risk, form]);
@@ -258,11 +266,61 @@ export function RiskFormDialog({
                 name="assessor_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Avaliador</FormLabel>
+                    <FormLabel>Risk Owner (Responsável)</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Selecione o avaliador" />
+                          <SelectValue placeholder="Selecione o responsável" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {profiles.map((profile) => (
+                          <SelectItem key={profile.id} value={profile.id}>
+                            {profile.full_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="approver_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Aprovador</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o aprovador" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {profiles.map((profile) => (
+                          <SelectItem key={profile.id} value={profile.id}>
+                            {profile.full_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="reviewer_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Revisor</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o revisor" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
