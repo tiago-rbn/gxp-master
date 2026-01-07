@@ -17,7 +17,12 @@ export function useSystems() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("systems")
-        .select("*, responsible:profiles!systems_responsible_id_fkey(full_name)")
+        .select(`
+          *,
+          responsible:profiles!systems_responsible_id_fkey(full_name),
+          system_owner:profiles!systems_system_owner_id_fkey(full_name),
+          process_owner:profiles!systems_process_owner_id_fkey(full_name)
+        `)
         .order("name");
 
       if (error) throw error;

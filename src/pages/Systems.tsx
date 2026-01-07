@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, Trash2, Loader2 } from "lucide-react";
+import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, Trash2, Loader2, Upload } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { GampBadge } from "@/components/shared/GampBadge";
@@ -32,10 +32,14 @@ import { useSystems } from "@/hooks/useSystems";
 import { SystemFormDialog } from "@/components/systems/SystemFormDialog";
 import { SystemViewDialog } from "@/components/systems/SystemViewDialog";
 import { DeleteSystemDialog } from "@/components/systems/DeleteSystemDialog";
+import { ImportSystemsDialog, ParsedSystem } from "@/components/systems/ImportSystemsDialog";
 import type { Database } from "@/integrations/supabase/types";
+import { toast } from "sonner";
 
 type System = Database["public"]["Tables"]["systems"]["Row"] & {
   responsible?: { full_name: string } | null;
+  system_owner?: { full_name: string } | null;
+  process_owner?: { full_name: string } | null;
 };
 
 const gampCategoryMap: Record<string, 1 | 3 | 4 | 5> = {
@@ -76,7 +80,9 @@ export default function Systems() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [selectedSystem, setSelectedSystem] = useState<System | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
 
   const { systems, isLoading, createSystem, updateSystem, deleteSystem } = useSystems();
 
@@ -116,6 +122,8 @@ export default function Systems() {
     const payload = {
       ...values,
       responsible_id: values.responsible_id || null,
+      system_owner_id: values.system_owner_id || null,
+      process_owner_id: values.process_owner_id || null,
       last_validation_date: values.last_validation_date || null,
       next_revalidation_date: values.next_revalidation_date || null,
     };
@@ -127,6 +135,44 @@ export default function Systems() {
       );
     } else {
       createSystem.mutate(payload, { onSuccess: () => setIsFormOpen(false) });
+    }
+  };
+
+  const handleImport = async (systems: ParsedSystem[]) => {
+    setIsImporting(true);
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const system of systems) {
+      try {
+        await createSystem.mutateAsync({
+          name: system.name,
+          vendor: system.vendor,
+          version: system.version,
+          gamp_category: system.gamp_category as "1" | "3" | "4" | "5",
+          criticality: system.criticality as "low" | "medium" | "high" | "critical",
+          validation_status: system.validation_status as any,
+          description: system.description,
+          gxp_impact: system.gxp_impact,
+          data_integrity_impact: system.data_integrity_impact,
+          bpx_relevant: system.bpx_relevant,
+          installation_location: system.installation_location,
+        });
+        successCount++;
+      } catch (error) {
+        console.error("Error importing system:", system.name, error);
+        errorCount++;
+      }
+    }
+
+    setIsImporting(false);
+    setIsImportOpen(false);
+
+    if (successCount > 0) {
+      toast.success(`${successCount} sistema(s) importado(s) com sucesso!`);
+    }
+    if (errorCount > 0) {
+      toast.error(`Falha ao importar ${errorCount} sistema(s).`);
     }
   };
 
@@ -146,12 +192,19 @@ export default function Systems() {
       <PageHeader
         title="Inventário de Sistemas"
         description="Gerencie todos os sistemas computadorizados da empresa"
-        action={{
-          label: "Novo Sistema",
-          icon: Plus,
-          onClick: handleCreate,
-        }}
       />
+
+      {/* Action Buttons */}
+      <div className="flex gap-2 mb-6">
+        <Button onClick={handleCreate}>
+          <Plus className="mr-2 h-4 w-4" />
+          Novo Sistema
+        </Button>
+        <Button variant="outline" onClick={() => setIsImportOpen(true)}>
+          <Upload className="mr-2 h-4 w-4" />
+          Importar CSV
+        </Button>
+      </div>
 
       {/* Filters */}
       <Card className="mb-6">
@@ -332,6 +385,13 @@ export default function Systems() {
         systemName={selectedSystem?.name || ""}
         onConfirm={handleConfirmDelete}
         isLoading={deleteSystem.isPending}
+      />
+
+      <ImportSystemsDialog
+        open={isImportOpen}
+        onOpenChange={setIsImportOpen}
+        onImport={handleImport}
+        isLoading={isImporting}
       />
     </AppLayout>
   );

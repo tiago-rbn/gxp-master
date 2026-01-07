@@ -46,8 +46,12 @@ const systemSchema = z.object({
   criticality: z.enum(["low", "medium", "high", "critical"]).optional(),
   gxp_impact: z.boolean().optional(),
   data_integrity_impact: z.boolean().optional(),
+  bpx_relevant: z.boolean().optional(),
   validation_status: z.enum(["not_started", "in_progress", "validated", "expired", "pending_revalidation"]).optional(),
   responsible_id: z.string().optional(),
+  system_owner_id: z.string().optional(),
+  process_owner_id: z.string().optional(),
+  installation_location: z.enum(["on_premise", "cloud", "hybrid"]).optional(),
   last_validation_date: z.string().optional(),
   next_revalidation_date: z.string().optional(),
 });
@@ -82,8 +86,12 @@ export function SystemFormDialog({
       criticality: "medium",
       gxp_impact: false,
       data_integrity_impact: false,
+      bpx_relevant: false,
       validation_status: "not_started",
       responsible_id: "",
+      system_owner_id: "",
+      process_owner_id: "",
+      installation_location: "on_premise",
       last_validation_date: "",
       next_revalidation_date: "",
     },
@@ -100,8 +108,12 @@ export function SystemFormDialog({
         criticality: (system.criticality as "low" | "medium" | "high" | "critical") || "medium",
         gxp_impact: system.gxp_impact || false,
         data_integrity_impact: system.data_integrity_impact || false,
+        bpx_relevant: system.bpx_relevant || false,
         validation_status: (system.validation_status as "not_started" | "in_progress" | "validated" | "expired" | "pending_revalidation") || "not_started",
         responsible_id: system.responsible_id || "",
+        system_owner_id: system.system_owner_id || "",
+        process_owner_id: system.process_owner_id || "",
+        installation_location: (system.installation_location as "on_premise" | "cloud" | "hybrid") || "on_premise",
         last_validation_date: system.last_validation_date || "",
         next_revalidation_date: system.next_revalidation_date || "",
       });
@@ -115,8 +127,12 @@ export function SystemFormDialog({
         criticality: "medium",
         gxp_impact: false,
         data_integrity_impact: false,
+        bpx_relevant: false,
         validation_status: "not_started",
         responsible_id: "",
+        system_owner_id: "",
+        process_owner_id: "",
+        installation_location: "on_premise",
         last_validation_date: "",
         next_revalidation_date: "",
       });
@@ -282,6 +298,79 @@ export function SystemFormDialog({
 
               <FormField
                 control={form.control}
+                name="system_owner_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Dono do Sistema</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o dono do sistema" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {profiles.map((profile) => (
+                          <SelectItem key={profile.id} value={profile.id}>
+                            {profile.full_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="process_owner_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Dono do Processo</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o dono do processo" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {profiles.map((profile) => (
+                          <SelectItem key={profile.id} value={profile.id}>
+                            {profile.full_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="installation_location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Local de Instalação</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o local" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="on_premise">On-Premise</SelectItem>
+                        <SelectItem value="cloud">Nuvem</SelectItem>
+                        <SelectItem value="hybrid">Híbrido</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
                 name="last_validation_date"
                 render={({ field }) => (
                   <FormItem>
@@ -326,7 +415,7 @@ export function SystemFormDialog({
               )}
             />
 
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
               <FormField
                 control={form.control}
                 name="gxp_impact"
@@ -348,7 +437,20 @@ export function SystemFormDialog({
                     <FormControl>
                       <Switch checked={field.value} onCheckedChange={field.onChange} />
                     </FormControl>
-                    <FormLabel className="cursor-pointer">Impacto em Integridade de Dados</FormLabel>
+                    <FormLabel className="cursor-pointer">Integridade de Dados</FormLabel>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="bpx_relevant"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-2 space-y-0">
+                    <FormControl>
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                    <FormLabel className="cursor-pointer">BPx Relevante</FormLabel>
                   </FormItem>
                 )}
               />
