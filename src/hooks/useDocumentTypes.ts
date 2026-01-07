@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import type { Json } from "@/integrations/supabase/types";
 
 export interface DocumentType {
   id: string;
@@ -124,7 +125,7 @@ export function useDocumentTypes() {
       const { error } = await supabase
         .from("companies")
         .update({
-          settings: { ...currentSettings, document_types: types },
+          settings: { ...currentSettings, document_types: types } as unknown as { [key: string]: Json | undefined },
         })
         .eq("id", profile.company_id);
 
