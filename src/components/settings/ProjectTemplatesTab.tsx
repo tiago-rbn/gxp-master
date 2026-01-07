@@ -169,7 +169,6 @@ export function ProjectTemplatesTab() {
       return acc;
     }, {} as Record<string, T[]>);
   };
-  };
 
   const deliverablesByGamp = groupByGamp(deliverableTemplates);
   const tasksByGamp = groupByGamp(taskTemplates);
