@@ -105,10 +105,6 @@ export function SystemViewDialog({
               <p className="font-medium">{system.data_integrity_impact ? "Sim" : "Não"}</p>
             </div>
             <div>
-              <Label className="text-muted-foreground">BPx Relevante</Label>
-              <p className="font-medium">{system.bpx_relevant ? "Sim" : "Não"}</p>
-            </div>
-            <div>
               <Label className="text-muted-foreground">Local de Instalação</Label>
               <p className="font-medium">
                 {installationLabels[system.installation_location || "on_premise"]}
