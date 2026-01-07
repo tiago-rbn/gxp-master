@@ -26,6 +26,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -38,12 +44,15 @@ import {
   Edit,
   Trash2,
   Calendar,
+  CalendarIcon,
+  X,
 } from "lucide-react";
 import { StatCard } from "@/components/shared/StatCard";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { format } from "date-fns";
+import { format, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { AuditLog } from "@/hooks/useAuditLogs";
+import { cn } from "@/lib/utils";
 
 const entityTypeLabels: Record<string, string> = {
   validation_projects: "Projetos",
@@ -66,6 +75,8 @@ export default function AuditTrail() {
   const [entityFilter, setEntityFilter] = useState<string>("all");
   const [actionFilter, setActionFilter] = useState<string>("all");
   const [viewingLog, setViewingLog] = useState<AuditLog | null>(null);
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
 
   const { auditLogs, isLoading, refetch, entityTypes, actions } = useAuditLogs(
     entityFilter !== "all" || actionFilter !== "all"
@@ -77,14 +88,27 @@ export default function AuditTrail() {
   );
 
   const filteredLogs = auditLogs.filter((log) => {
-    if (!search) return true;
-    const searchLower = search.toLowerCase();
-    return (
-      log.entity_type.toLowerCase().includes(searchLower) ||
-      log.action.toLowerCase().includes(searchLower) ||
-      log.user?.full_name?.toLowerCase().includes(searchLower) ||
-      log.user?.email?.toLowerCase().includes(searchLower)
-    );
+    // Text search filter
+    if (search) {
+      const searchLower = search.toLowerCase();
+      const matchesSearch = 
+        log.entity_type.toLowerCase().includes(searchLower) ||
+        log.action.toLowerCase().includes(searchLower) ||
+        log.user?.full_name?.toLowerCase().includes(searchLower) ||
+        log.user?.email?.toLowerCase().includes(searchLower);
+      if (!matchesSearch) return false;
+    }
+
+    // Date range filter
+    const logDate = new Date(log.created_at);
+    if (startDate && isBefore(logDate, startOfDay(startDate))) {
+      return false;
+    }
+    if (endDate && isAfter(logDate, endOfDay(endDate))) {
+      return false;
+    }
+
+    return true;
   });
 
   const stats = {
@@ -208,8 +232,74 @@ export default function AuditTrail() {
                 className="pl-9"
               />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Filter className="h-4 w-4 text-muted-foreground" />
+              
+              {/* Date Range Filters */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-[140px] justify-start text-left font-normal",
+                      !startDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, "dd/MM/yyyy", { locale: ptBR }) : "Data início"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={startDate}
+                    onSelect={setStartDate}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                    locale={ptBR}
+                  />
+                </PopoverContent>
+              </Popover>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-[140px] justify-start text-left font-normal",
+                      !endDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, "dd/MM/yyyy", { locale: ptBR }) : "Data fim"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={endDate}
+                    onSelect={setEndDate}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                    locale={ptBR}
+                  />
+                </PopoverContent>
+              </Popover>
+
+              {(startDate || endDate) && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setStartDate(undefined);
+                    setEndDate(undefined);
+                  }}
+                  title="Limpar datas"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+
               <Select value={entityFilter} onValueChange={setEntityFilter}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Tipo de entidade" />
