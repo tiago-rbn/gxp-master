@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, FileText, Link2, Check, Clock, MoreHorizontal, Loader2 } from "lucide-react";
+import { Plus, Trash2, FileText, Link2, Check, Clock, MoreHorizontal, Loader2, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +27,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -38,6 +48,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useProjectDeliverables, ProjectDeliverable } from "@/hooks/useProjectDeliverables";
 import { useDocuments } from "@/hooks/useDocuments";
 import { useDocumentTypes } from "@/hooks/useDocumentTypes";
+import { useDeliverableTemplates } from "@/hooks/useDeliverableTemplates";
 
 interface ProjectDeliverablesTabProps {
   projectId: string;
@@ -54,9 +65,11 @@ export function ProjectDeliverablesTab({ projectId, gampCategory }: ProjectDeliv
   const { deliverables, isLoading, addDeliverable, updateDeliverable, deleteDeliverable, linkDocument, applyTemplate } = useProjectDeliverables(projectId);
   const { documents } = useDocuments();
   const { documentTypes } = useDocumentTypes();
+  const { templates: deliverableTemplates } = useDeliverableTemplates();
   
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isLinkOpen, setIsLinkOpen] = useState(false);
+  const [isApplyTemplateOpen, setIsApplyTemplateOpen] = useState(false);
   const [selectedDeliverable, setSelectedDeliverable] = useState<ProjectDeliverable | null>(null);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string>("");
   
@@ -129,8 +142,12 @@ export function ProjectDeliverablesTab({ projectId, gampCategory }: ProjectDeliv
   const handleApplyTemplate = async () => {
     if (gampCategory) {
       await applyTemplate.mutateAsync(gampCategory);
+      setIsApplyTemplateOpen(false);
     }
   };
+
+  const templatesForCategory = deliverableTemplates?.filter(t => t.gamp_category === gampCategory) || [];
+  const templateCount = templatesForCategory.length;
 
   const handleToggleStatus = async (deliverable: ProjectDeliverable) => {
     const newStatus = deliverable.status === "completed" ? "pending" : "completed";
@@ -156,9 +173,10 @@ export function ProjectDeliverablesTab({ projectId, gampCategory }: ProjectDeliv
           {deliverables.filter(d => d.status === "completed").length} de {deliverables.length} concluídos
         </div>
         <div className="flex gap-2">
-          {gampCategory && (
-            <Button variant="outline" size="sm" onClick={handleApplyTemplate} disabled={applyTemplate.isPending}>
-              Aplicar Template
+          {gampCategory && templateCount > 0 && (
+            <Button variant="outline" size="sm" onClick={() => setIsApplyTemplateOpen(true)} disabled={applyTemplate.isPending}>
+              <Download className="mr-2 h-4 w-4" />
+              Aplicar Template ({templateCount})
             </Button>
           )}
           <Button size="sm" onClick={() => handleOpenForm()}>
@@ -369,6 +387,30 @@ export function ProjectDeliverablesTab({ projectId, gampCategory }: ProjectDeliv
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Apply Template Confirmation Dialog */}
+      <AlertDialog open={isApplyTemplateOpen} onOpenChange={setIsApplyTemplateOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Aplicar Template de Entregáveis</AlertDialogTitle>
+            <AlertDialogDescription>
+              Serão adicionados {templateCount} entregáveis do template da categoria GAMP {gampCategory}.
+              {deliverables.length > 0 && (
+                <span className="block mt-2 text-warning font-medium">
+                  Atenção: Este projeto já possui {deliverables.length} entregável(is). 
+                  Os novos itens serão adicionados aos existentes.
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleApplyTemplate} disabled={applyTemplate.isPending}>
+              {applyTemplate.isPending ? "Aplicando..." : "Aplicar Template"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

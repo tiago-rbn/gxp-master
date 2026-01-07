@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, ListTodo, MoreHorizontal, Loader2, User } from "lucide-react";
+import { Plus, Trash2, ListTodo, MoreHorizontal, Loader2, User, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +27,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -37,6 +47,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useProjectTasks, ProjectTask } from "@/hooks/useProjectTasks";
 import { useProfiles } from "@/hooks/useProfiles";
+import { useTaskTemplates } from "@/hooks/useTaskTemplates";
 
 interface ProjectTasksTabProps {
   projectId: string;
@@ -69,8 +80,10 @@ const phaseOptions = [
 export function ProjectTasksTab({ projectId, gampCategory }: ProjectTasksTabProps) {
   const { tasks, isLoading, addTask, updateTask, deleteTask, applyTemplate } = useProjectTasks(projectId);
   const { profiles } = useProfiles();
+  const { templates: taskTemplates } = useTaskTemplates();
   
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isApplyTemplateOpen, setIsApplyTemplateOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<ProjectTask | null>(null);
   
   const [formData, setFormData] = useState({
@@ -137,8 +150,12 @@ export function ProjectTasksTab({ projectId, gampCategory }: ProjectTasksTabProp
   const handleApplyTemplate = async () => {
     if (gampCategory) {
       await applyTemplate.mutateAsync(gampCategory);
+      setIsApplyTemplateOpen(false);
     }
   };
+
+  const templatesForCategory = taskTemplates?.filter(t => t.gamp_category === gampCategory) || [];
+  const templateCount = templatesForCategory.length;
 
   const handleToggleStatus = async (task: ProjectTask) => {
     const newStatus = task.status === "completed" ? "pending" : "completed";
@@ -171,9 +188,10 @@ export function ProjectTasksTab({ projectId, gampCategory }: ProjectTasksTabProp
           )}
         </div>
         <div className="flex gap-2">
-          {gampCategory && (
-            <Button variant="outline" size="sm" onClick={handleApplyTemplate} disabled={applyTemplate.isPending}>
-              Aplicar Template
+          {gampCategory && templateCount > 0 && (
+            <Button variant="outline" size="sm" onClick={() => setIsApplyTemplateOpen(true)} disabled={applyTemplate.isPending}>
+              <Download className="mr-2 h-4 w-4" />
+              Aplicar Template ({templateCount})
             </Button>
           )}
           <Button size="sm" onClick={() => handleOpenForm()}>
@@ -389,6 +407,30 @@ export function ProjectTasksTab({ projectId, gampCategory }: ProjectTasksTabProp
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Apply Template Confirmation Dialog */}
+      <AlertDialog open={isApplyTemplateOpen} onOpenChange={setIsApplyTemplateOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Aplicar Template de Tarefas</AlertDialogTitle>
+            <AlertDialogDescription>
+              Serão adicionadas {templateCount} tarefas do template da categoria GAMP {gampCategory}.
+              {tasks.length > 0 && (
+                <span className="block mt-2 text-warning font-medium">
+                  Atenção: Este projeto já possui {tasks.length} tarefa(s). 
+                  Os novos itens serão adicionados aos existentes.
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleApplyTemplate} disabled={applyTemplate.isPending}>
+              {applyTemplate.isPending ? "Aplicando..." : "Aplicar Template"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
