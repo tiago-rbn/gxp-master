@@ -132,25 +132,16 @@ export function useProfiles() {
 
   const updateUserRole = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
-      // First check if user has a role entry
-      const { data: existing } = await supabase
+      const { error: deleteError } = await supabase
         .from("user_roles")
-        .select("id")
-        .eq("user_id", userId)
-        .maybeSingle();
+        .delete()
+        .eq("user_id", userId);
+      if (deleteError) throw deleteError;
 
-      if (existing) {
-        const { error } = await supabase
-          .from("user_roles")
-          .update({ role: role as any })
-          .eq("user_id", userId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("user_roles")
-          .insert({ user_id: userId, role: role as any });
-        if (error) throw error;
-      }
+      const { error: insertError } = await supabase
+        .from("user_roles")
+        .insert({ user_id: userId, role: role as any });
+      if (insertError) throw insertError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profiles"] });

@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { UserFormDialog } from "@/components/settings/UserFormDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,7 +29,7 @@ import {
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Edit, UserCheck, UserX, Plus } from "lucide-react";
+import { Loader2, Edit, UserCheck, UserX, Plus, User } from "lucide-react";
 import { Company } from "@/hooks/useCompanies";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -45,6 +46,8 @@ type UserWithRole = {
   email: string;
   is_active: boolean;
   created_at: string;
+  department?: string | null;
+  position?: string | null;
   role?: string;
 };
 
@@ -55,6 +58,8 @@ export function CompanyUsersDialog({
 }: CompanyUsersDialogProps) {
   const queryClient = useQueryClient();
   const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
+  const [profileUser, setProfileUser] = useState<UserWithRole | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newUserData, setNewUserData] = useState({
     full_name: "",
@@ -101,7 +106,7 @@ export function CompanyUsersDialog({
       role,
     }: {
       userId: string;
-      updates: { full_name?: string; is_active?: boolean };
+      updates: { full_name?: string; email?: string; is_active?: boolean; department?: string | null; position?: string | null };
       role?: string;
     }) => {
       // Update profile
@@ -115,30 +120,24 @@ export function CompanyUsersDialog({
 
       // Update role if provided
       if (role) {
-        const { data: existing } = await supabase
+        const { error: deleteError } = await supabase
           .from("user_roles")
-          .select("id")
-          .eq("user_id", userId)
-          .maybeSingle();
+          .delete()
+          .eq("user_id", userId);
+        if (deleteError) throw deleteError;
 
-        if (existing) {
-          const { error } = await supabase
-            .from("user_roles")
-            .update({ role: role as any })
-            .eq("user_id", userId);
-          if (error) throw error;
-        } else {
-          const { error } = await supabase
-            .from("user_roles")
-            .insert({ user_id: userId, role: role as any });
-          if (error) throw error;
-        }
+        const { error: insertError } = await supabase
+          .from("user_roles")
+          .insert({ user_id: userId, role: role as any });
+        if (insertError) throw insertError;
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["company-users", company?.id] });
       toast.success("Usuário atualizado com sucesso");
       setEditingUser(null);
+      setProfileDialogOpen(false);
+      setProfileUser(null);
     },
     onError: (error) => {
       toast.error("Erro ao atualizar usuário: " + error.message);
@@ -183,6 +182,24 @@ export function CompanyUsersDialog({
     updateUser.mutate({
       userId: user.id,
       updates: { is_active: !user.is_active },
+    });
+  };
+
+  const handleEditProfile = (user: UserWithRole) => {
+    setProfileUser(user);
+    setProfileDialogOpen(true);
+  };
+
+  const handleProfileSubmit = (data: { full_name?: string; email?: string; department?: string | null; position?: string | null }) => {
+    if (!profileUser) return;
+    updateUser.mutate({
+      userId: profileUser.id,
+      updates: {
+        full_name: data.full_name,
+        email: data.email,
+        department: data.department,
+        position: data.position,
+      },
     });
   };
 
@@ -404,6 +421,14 @@ export function CompanyUsersDialog({
                               <Button
                                 variant="ghost"
                                 size="sm"
+                                onClick={() => handleEditProfile(user)}
+                                title="Editar Perfil"
+                              >
+                                <User className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
                                 onClick={() => handleToggleActive(user)}
                               >
                                 {user.is_active ? (
@@ -423,6 +448,17 @@ export function CompanyUsersDialog({
             </Table>
           )}
         </div>
+
+        <UserFormDialog
+          open={profileDialogOpen}
+          onOpenChange={(open) => {
+            setProfileDialogOpen(open);
+            if (!open) setProfileUser(null);
+          }}
+          user={profileUser as any}
+          onSubmit={handleProfileSubmit}
+          isSubmitting={updateUser.isPending}
+        />
       </DialogContent>
     </Dialog>
   );

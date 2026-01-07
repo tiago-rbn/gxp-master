@@ -1,11 +1,21 @@
 import { useState } from "react";
-import { Building2, Plus, Edit, Users, Loader2, Search, ShieldAlert } from "lucide-react";
+import { Building2, Plus, Edit, Users, Loader2, Search, ShieldAlert, Trash2 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Table,
   TableBody,
@@ -22,11 +32,13 @@ import { ptBR } from "date-fns/locale";
 import { Navigate } from "react-router-dom";
 
 export default function Companies() {
-  const { companies, isLoading, isSuperAdmin, createCompany, updateCompany } = useCompanies();
+  const { companies, isLoading, isSuperAdmin, createCompany, updateCompany, deleteCompany } = useCompanies();
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [usersDialogOpen, setUsersDialogOpen] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
 
   // Redirect if not super_admin
   if (isSuperAdmin === false) {
@@ -52,6 +64,18 @@ export default function Companies() {
   const handleManageUsers = (company: Company) => {
     setSelectedCompany(company);
     setUsersDialogOpen(true);
+  };
+
+  const handleDeleteCompany = (company: Company) => {
+    setCompanyToDelete(company);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!companyToDelete) return;
+    await deleteCompany.mutateAsync(companyToDelete.id);
+    setDeleteDialogOpen(false);
+    setCompanyToDelete(null);
   };
 
   const handleSubmit = async (data: { name: string; cnpj?: string; address?: string; phone?: string; logo_url?: string }) => {
@@ -202,6 +226,15 @@ export default function Companies() {
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteCompany(company)}
+                            title="Excluir Empresa"
+                            disabled={(company.user_count || 0) > 0}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -226,6 +259,29 @@ export default function Companies() {
         onOpenChange={setUsersDialogOpen}
         company={selectedCompany}
       />
+
+      <AlertDialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          setDeleteDialogOpen(open);
+          if (!open) setCompanyToDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Empresa</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação é irreversível. A empresa "{companyToDelete?.name}" será removida do sistema.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteCompany.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete} disabled={deleteCompany.isPending}>
+              {deleteCompany.isPending ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 }

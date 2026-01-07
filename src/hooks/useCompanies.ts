@@ -106,6 +106,45 @@ export function useCompanies() {
     },
   });
 
+  const deleteCompany = useMutation({
+    mutationFn: async (id: string) => {
+      const { count: userCount, error: userCountError } = await supabase
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("company_id", id);
+
+      if (userCountError) throw userCountError;
+      if (userCount && userCount > 0) {
+        throw new Error("Não é possível excluir: existem usuários vinculados a esta empresa.");
+      }
+
+      const { count: systemCount, error: systemCountError } = await supabase
+        .from("systems")
+        .select("id", { count: "exact", head: true })
+        .eq("company_id", id);
+
+      if (systemCountError) throw systemCountError;
+      if (systemCount && systemCount > 0) {
+        throw new Error("Não é possível excluir: existem sistemas vinculados a esta empresa.");
+      }
+
+      const { error } = await supabase
+        .from("companies")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+      return id;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
+      toast.success("Empresa excluída com sucesso");
+    },
+    onError: (error) => {
+      toast.error("Erro ao excluir empresa: " + error.message);
+    },
+  });
+
   return {
     companies,
     isLoading,
@@ -113,5 +152,6 @@ export function useCompanies() {
     isSuperAdmin,
     createCompany,
     updateCompany,
+    deleteCompany,
   };
 }

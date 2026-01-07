@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Profile } from "@/hooks/useProfiles";
 import {
   Dialog,
@@ -41,6 +41,15 @@ export function UserFormDialog({
     position: user?.position || "",
   });
 
+  useEffect(() => {
+    setFormData({
+      full_name: user?.full_name || "",
+      email: user?.email || "",
+      department: user?.department || "",
+      position: user?.position || "",
+    });
+  }, [user, open]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(formData);
@@ -74,8 +83,10 @@ export function UserFormDialog({
                 id="email"
                 type="email"
                 value={formData.email}
-                disabled
-                className="bg-muted"
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
+                required
               />
             </div>
             <div className="space-y-2">
