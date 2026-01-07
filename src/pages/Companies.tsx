@@ -54,13 +54,14 @@ export default function Companies() {
     setUsersDialogOpen(true);
   };
 
-  const handleSubmit = async (data: { name: string; cnpj?: string; address?: string; phone?: string }) => {
+  const handleSubmit = async (data: { name: string; cnpj?: string; address?: string; phone?: string; logo_url?: string }) => {
     if (selectedCompany) {
       await updateCompany.mutateAsync({
         id: selectedCompany.id,
         updates: {
           name: data.name,
           cnpj: data.cnpj || null,
+          logo_url: data.logo_url || null,
           settings: {
             ...(selectedCompany.settings as Record<string, any> || {}),
             address: data.address,
@@ -150,9 +151,17 @@ export default function Companies() {
                     <TableRow key={company.id}>
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                            <Building2 className="h-5 w-5 text-primary" />
-                          </div>
+                          {company.logo_url ? (
+                            <img 
+                              src={company.logo_url} 
+                              alt={company.name}
+                              className="h-10 w-10 rounded-lg object-contain bg-muted"
+                            />
+                          ) : (
+                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                              <Building2 className="h-5 w-5 text-primary" />
+                            </div>
+                          )}
                           <div>
                             <span className="font-medium">{company.name}</span>
                             {(company.settings as Record<string, any>)?.address && (
