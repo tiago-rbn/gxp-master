@@ -46,7 +46,6 @@ const systemSchema = z.object({
   criticality: z.enum(["low", "medium", "high", "critical"]).optional(),
   gxp_impact: z.boolean().optional(),
   data_integrity_impact: z.boolean().optional(),
-  bpx_relevant: z.boolean().optional(),
   validation_status: z.enum(["not_started", "in_progress", "validated", "expired", "pending_revalidation"]).optional(),
   responsible_id: z.string().optional(),
   system_owner_id: z.string().optional(),
@@ -86,7 +85,6 @@ export function SystemFormDialog({
       criticality: "medium",
       gxp_impact: false,
       data_integrity_impact: false,
-      bpx_relevant: false,
       validation_status: "not_started",
       responsible_id: "",
       system_owner_id: "",
@@ -108,7 +106,6 @@ export function SystemFormDialog({
         criticality: (system.criticality as "low" | "medium" | "high" | "critical") || "medium",
         gxp_impact: system.gxp_impact || false,
         data_integrity_impact: system.data_integrity_impact || false,
-        bpx_relevant: system.bpx_relevant || false,
         validation_status: (system.validation_status as "not_started" | "in_progress" | "validated" | "expired" | "pending_revalidation") || "not_started",
         responsible_id: system.responsible_id || "",
         system_owner_id: system.system_owner_id || "",
@@ -127,7 +124,6 @@ export function SystemFormDialog({
         criticality: "medium",
         gxp_impact: false,
         data_integrity_impact: false,
-        bpx_relevant: false,
         validation_status: "not_started",
         responsible_id: "",
         system_owner_id: "",
@@ -438,19 +434,6 @@ export function SystemFormDialog({
                       <Switch checked={field.value} onCheckedChange={field.onChange} />
                     </FormControl>
                     <FormLabel className="cursor-pointer">Integridade de Dados</FormLabel>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="bpx_relevant"
-                render={({ field }) => (
-                  <FormItem className="flex items-center gap-2 space-y-0">
-                    <FormControl>
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                    <FormLabel className="cursor-pointer">BPx Relevante</FormLabel>
                   </FormItem>
                 )}
               />
