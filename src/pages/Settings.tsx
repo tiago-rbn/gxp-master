@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Building2, Users, Shield, FileText, Settings as SettingsIcon, Plus, Edit, Trash2, MoreHorizontal, Loader2, Mail, RefreshCw, XCircle, Clock, Tags } from "lucide-react";
+import { Building2, Users, Shield, FileText, Settings as SettingsIcon, Plus, Edit, Trash2, MoreHorizontal, Loader2, Mail, RefreshCw, XCircle, Clock, Tags, Package } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge, StatusType } from "@/components/shared/StatusBadge";
@@ -39,6 +39,7 @@ import { DeleteTemplateDialog } from "@/components/settings/DeleteTemplateDialog
 import { InviteUserDialog } from "@/components/settings/InviteUserDialog";
 import { DocumentTypeFormDialog } from "@/components/settings/DocumentTypeFormDialog";
 import { DeleteDocumentTypeDialog } from "@/components/settings/DeleteDocumentTypeDialog";
+import { ProjectTemplatesTab } from "@/components/settings/ProjectTemplatesTab";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -302,7 +303,7 @@ export default function Settings() {
       />
 
       <Tabs defaultValue="company" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:grid-cols-6">
+        <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:grid-cols-7">
           <TabsTrigger value="company" className="gap-2">
             <Building2 className="h-4 w-4" />
             <span className="hidden sm:inline">Empresa</span>
@@ -317,7 +318,11 @@ export default function Settings() {
           </TabsTrigger>
           <TabsTrigger value="templates" className="gap-2">
             <FileText className="h-4 w-4" />
-            <span className="hidden sm:inline">Templates</span>
+            <span className="hidden sm:inline">Documentos</span>
+          </TabsTrigger>
+          <TabsTrigger value="project-templates" className="gap-2">
+            <Package className="h-4 w-4" />
+            <span className="hidden sm:inline">Projetos</span>
           </TabsTrigger>
           <TabsTrigger value="types" className="gap-2">
             <Tags className="h-4 w-4" />
@@ -732,6 +737,11 @@ export default function Settings() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Project Templates Tab */}
+        <TabsContent value="project-templates">
+          <ProjectTemplatesTab />
         </TabsContent>
 
         {/* Document Types Tab */}

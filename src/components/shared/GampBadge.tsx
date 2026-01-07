@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-type GampCategory = 1 | 3 | 4 | 5;
+export type GampCategory = 1 | 3 | 4 | 5 | "1" | "3" | "4" | "5";
 
 interface GampBadgeProps {
   category: GampCategory;
@@ -33,7 +33,10 @@ const gampConfig: Record<GampCategory, { label: string; description: string; col
 };
 
 export function GampBadge({ category, showDescription = false, className }: GampBadgeProps) {
-  const config = gampConfig[category];
+  const numericCategory = (typeof category === 'string' ? parseInt(category) : category) as 1 | 3 | 4 | 5;
+  const config = gampConfig[numericCategory];
+
+  if (!config) return null;
 
   return (
     <Badge 
