@@ -25,7 +25,26 @@ export function useValidationProjects() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data;
+      
+      // Fetch approver info separately
+      const approverIds = [...new Set(data.filter(p => p.approved_by).map(p => p.approved_by))];
+      let approvers: Record<string, { full_name: string }> = {};
+      
+      if (approverIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", approverIds);
+        
+        if (profiles) {
+          approvers = profiles.reduce((acc, p) => ({ ...acc, [p.id]: { full_name: p.full_name } }), {});
+        }
+      }
+      
+      return data.map(p => ({
+        ...p,
+        approver: p.approved_by ? approvers[p.approved_by] : null
+      }));
     },
     enabled: !!user,
   });
@@ -96,6 +115,112 @@ export function useValidationProjects() {
     },
   });
 
+  // Submit project for approval
+  const submitForApproval = useMutation({
+    mutationFn: async (id: string) => {
+      const { data, error } = await supabase
+        .from("validation_projects")
+        .update({ status: "pending" as any })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["validation_projects"] });
+      toast.success("Projeto enviado para aprovação!");
+    },
+    onError: (error) => {
+      console.error("Error submitting project:", error);
+      toast.error("Erro ao enviar projeto para aprovação");
+    },
+  });
+
+  // Approve project
+  const approveProject = useMutation({
+    mutationFn: async (id: string) => {
+      const { data, error } = await supabase
+        .from("validation_projects")
+        .update({ 
+          status: "approved" as any,
+          approved_by: user!.id,
+          approved_at: new Date().toISOString(),
+          rejection_reason: null
+        })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["validation_projects"] });
+      toast.success("Projeto aprovado!");
+    },
+    onError: (error) => {
+      console.error("Error approving project:", error);
+      toast.error("Erro ao aprovar projeto");
+    },
+  });
+
+  // Reject project
+  const rejectProject = useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      const { data, error } = await supabase
+        .from("validation_projects")
+        .update({ 
+          status: "rejected" as any,
+          approved_by: user!.id,
+          approved_at: new Date().toISOString(),
+          rejection_reason: reason
+        })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["validation_projects"] });
+      toast.success("Projeto rejeitado");
+    },
+    onError: (error) => {
+      console.error("Error rejecting project:", error);
+      toast.error("Erro ao rejeitar projeto");
+    },
+  });
+
+  // Mark project as completed
+  const completeProject = useMutation({
+    mutationFn: async (id: string) => {
+      const { data, error } = await supabase
+        .from("validation_projects")
+        .update({ 
+          status: "completed" as any,
+          progress: 100,
+          completion_date: new Date().toISOString().split('T')[0]
+        })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["validation_projects"] });
+      toast.success("Projeto concluído!");
+    },
+    onError: (error) => {
+      console.error("Error completing project:", error);
+      toast.error("Erro ao concluir projeto");
+    },
+  });
+
   return {
     projects,
     isLoading,
@@ -103,5 +228,9 @@ export function useValidationProjects() {
     createProject,
     updateProject,
     deleteProject,
+    submitForApproval,
+    approveProject,
+    rejectProject,
+    completeProject,
   };
 }
