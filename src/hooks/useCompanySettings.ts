@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import type { DocumentType } from "@/hooks/useDocumentTypes";
+import type { Json } from "@/integrations/supabase/types";
 
 export interface CompanySettings {
   id: string;
@@ -61,7 +62,7 @@ export function useCompanySettings() {
           name: updates.name,
           cnpj: updates.cnpj,
           logo_url: updates.logo_url,
-          settings: updates.settings,
+          settings: updates.settings as unknown as { [key: string]: Json | undefined },
         })
         .eq("id", company.id)
         .select()

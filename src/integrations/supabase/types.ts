@@ -368,6 +368,72 @@ export type Database = {
           },
         ]
       }
+      requirements: {
+        Row: {
+          code: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          priority: string | null
+          project_id: string | null
+          source: string | null
+          status: string | null
+          system_id: string | null
+          title: string
+          type: string | null
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          priority?: string | null
+          project_id?: string | null
+          source?: string | null
+          status?: string | null
+          system_id?: string | null
+          title: string
+          type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          priority?: string | null
+          project_id?: string | null
+          source?: string | null
+          status?: string | null
+          system_id?: string | null
+          title?: string
+          type?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "requirements_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "validation_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requirements_system_id_fkey"
+            columns: ["system_id"]
+            isOneToOne: false
+            referencedRelation: "systems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       risk_assessments: {
         Row: {
           assessment_type: string
@@ -443,6 +509,45 @@ export type Database = {
             columns: ["system_id"]
             isOneToOne: false
             referencedRelation: "systems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rtm_links: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          requirement_id: string
+          test_case_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          requirement_id: string
+          test_case_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          requirement_id?: string
+          test_case_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rtm_links_requirement_id_fkey"
+            columns: ["requirement_id"]
+            isOneToOne: false
+            referencedRelation: "requirements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rtm_links_test_case_id_fkey"
+            columns: ["test_case_id"]
+            isOneToOne: false
+            referencedRelation: "test_cases"
             referencedColumns: ["id"]
           },
         ]
@@ -525,6 +630,78 @@ export type Database = {
           },
         ]
       }
+      test_cases: {
+        Row: {
+          code: string
+          company_id: string
+          created_at: string
+          description: string | null
+          executed_at: string | null
+          executed_by: string | null
+          expected_results: string | null
+          id: string
+          preconditions: string | null
+          project_id: string | null
+          result: string | null
+          status: string | null
+          steps: string | null
+          system_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          company_id: string
+          created_at?: string
+          description?: string | null
+          executed_at?: string | null
+          executed_by?: string | null
+          expected_results?: string | null
+          id?: string
+          preconditions?: string | null
+          project_id?: string | null
+          result?: string | null
+          status?: string | null
+          steps?: string | null
+          system_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          executed_at?: string | null
+          executed_by?: string | null
+          expected_results?: string | null
+          id?: string
+          preconditions?: string | null
+          project_id?: string | null
+          result?: string | null
+          status?: string | null
+          steps?: string | null
+          system_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_cases_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "validation_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "test_cases_system_id_fkey"
+            columns: ["system_id"]
+            isOneToOne: false
+            referencedRelation: "systems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -548,6 +725,8 @@ export type Database = {
       }
       validation_projects: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           company_id: string
           completion_date: string | null
           created_at: string
@@ -557,6 +736,7 @@ export type Database = {
           name: string
           progress: number | null
           project_type: string | null
+          rejection_reason: string | null
           start_date: string | null
           status: Database["public"]["Enums"]["status_type"] | null
           system_id: string | null
@@ -564,6 +744,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           company_id: string
           completion_date?: string | null
           created_at?: string
@@ -573,6 +755,7 @@ export type Database = {
           name: string
           progress?: number | null
           project_type?: string | null
+          rejection_reason?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["status_type"] | null
           system_id?: string | null
@@ -580,6 +763,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           company_id?: string
           completion_date?: string | null
           created_at?: string
@@ -589,6 +774,7 @@ export type Database = {
           name?: string
           progress?: number | null
           project_type?: string | null
+          rejection_reason?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["status_type"] | null
           system_id?: string | null
