@@ -10,7 +10,7 @@ async function sendEmail(to: string[], subject: string, html: string) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: "CSV System <onboarding@resend.dev>",
+      from: "CSVOne <onboarding@resend.dev>",
       to: to,
       subject,
       html,
@@ -85,7 +85,7 @@ const getEmailSubject = (status: string, projectName: string): string => {
 const generateEmailHtml = (data: NotificationRequest): string => {
   const statusColor = getStatusColor(data.new_status);
   const statusLabel = statusLabels[data.new_status] || data.new_status;
-  const companyName = data.company_name || "CSV System";
+  const companyName = data.company_name || "CSVOne";
 
   let actionText = "";
   if (data.new_status === "pending") {
