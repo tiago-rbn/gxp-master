@@ -303,7 +303,7 @@ export default function Settings() {
       />
 
       <Tabs defaultValue="company" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:grid-cols-7">
+        <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:grid-cols-6">
           <TabsTrigger value="company" className="gap-2">
             <Building2 className="h-4 w-4" />
             <span className="hidden sm:inline">Empresa</span>
@@ -316,17 +316,13 @@ export default function Settings() {
             <Shield className="h-4 w-4" />
             <span className="hidden sm:inline">Permissões</span>
           </TabsTrigger>
-          <TabsTrigger value="templates" className="gap-2">
+          <TabsTrigger value="documents" className="gap-2">
             <FileText className="h-4 w-4" />
             <span className="hidden sm:inline">Documentos</span>
           </TabsTrigger>
           <TabsTrigger value="project-templates" className="gap-2">
             <Package className="h-4 w-4" />
             <span className="hidden sm:inline">Projetos</span>
-          </TabsTrigger>
-          <TabsTrigger value="types" className="gap-2">
-            <Tags className="h-4 w-4" />
-            <span className="hidden sm:inline">Tipos</span>
           </TabsTrigger>
           <TabsTrigger value="parameters" className="gap-2">
             <SettingsIcon className="h-4 w-4" />
@@ -676,147 +672,163 @@ export default function Settings() {
           </Card>
         </TabsContent>
 
-        {/* Templates Tab */}
-        <TabsContent value="templates">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Templates de Documentos</CardTitle>
-                <CardDescription>Modelos para geração automática de documentos</CardDescription>
-              </div>
-              <Button onClick={handleNewTemplate}>
-                <Plus className="mr-2 h-4 w-4" />
-                Novo Template
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {templatesLoading ? (
-                <div className="flex h-32 items-center justify-center">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {templates?.map((template) => (
-                    <Card key={template.id}>
-                      <CardContent className="flex items-center justify-between p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                            <FileText className="h-5 w-5 text-primary" />
-                          </div>
-                          <div>
-                            <p className="font-medium">{template.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {template.document_type} • v{template.version}
-                            </p>
-                          </div>
-                        </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEditTemplate(template)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() => handleDeleteTemplateClick(template)}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Excluir
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+        {/* Documents Tab with Sub-tabs */}
+        <TabsContent value="documents">
+          <Tabs defaultValue="templates" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="templates" className="gap-2">
+                <FileText className="h-4 w-4" />
+                Templates de Documentos
+              </TabsTrigger>
+              <TabsTrigger value="types" className="gap-2">
+                <Tags className="h-4 w-4" />
+                Tipos
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Templates Sub-tab */}
+            <TabsContent value="templates">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle>Templates de Documentos</CardTitle>
+                    <CardDescription>Modelos para geração automática de documentos</CardDescription>
+                  </div>
+                  <Button onClick={handleNewTemplate}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Novo Template
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  {templatesLoading ? (
+                    <div className="flex h-32 items-center justify-center">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : (
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {templates?.map((template) => (
+                        <Card key={template.id}>
+                          <CardContent className="flex items-center justify-between p-4">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                                <FileText className="h-5 w-5 text-primary" />
+                              </div>
+                              <div>
+                                <p className="font-medium">{template.name}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {template.document_type} • v{template.version}
+                                </p>
+                              </div>
+                            </div>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleEditTemplate(template)}>
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={() => handleDeleteTemplateClick(template)}
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Excluir
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Types Sub-tab */}
+            <TabsContent value="types">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle>Tipos de Documento</CardTitle>
+                    <CardDescription>Cadastre e gerencie os tipos usados nos documentos</CardDescription>
+                  </div>
+                  <Button onClick={handleNewDocumentType}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Novo Tipo
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  {documentTypesLoading ? (
+                    <div className="flex h-32 items-center justify-center">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[120px]">Código</TableHead>
+                          <TableHead>Nome</TableHead>
+                          <TableHead>Descrição</TableHead>
+                          <TableHead className="w-[120px]">Cor</TableHead>
+                          <TableHead className="w-[50px]"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {documentTypes?.map((type) => (
+                          <TableRow key={type.id}>
+                            <TableCell>
+                              <Badge variant="outline" className={type.color || ""}>
+                                {type.code}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="font-medium">{type.name}</TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {type.description || "-"}
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {type.color || "-"}
+                            </TableCell>
+                            <TableCell>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => handleEditDocumentType(type)}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Editar
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    className="text-destructive"
+                                    onClick={() => handleDeleteDocumentTypeClick(type)}
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Excluir
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </TabsContent>
 
         {/* Project Templates Tab */}
         <TabsContent value="project-templates">
           <ProjectTemplatesTab />
-        </TabsContent>
-
-        {/* Document Types Tab */}
-        <TabsContent value="types">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Tipos de Documento</CardTitle>
-                <CardDescription>Cadastre e gerencie os tipos usados nos documentos</CardDescription>
-              </div>
-              <Button onClick={handleNewDocumentType}>
-                <Plus className="mr-2 h-4 w-4" />
-                Novo Tipo
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {documentTypesLoading ? (
-                <div className="flex h-32 items-center justify-center">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[120px]">Código</TableHead>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Descrição</TableHead>
-                      <TableHead className="w-[120px]">Cor</TableHead>
-                      <TableHead className="w-[50px]"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {documentTypes?.map((type) => (
-                      <TableRow key={type.id}>
-                        <TableCell>
-                          <Badge variant="outline" className={type.color || ""}>
-                            {type.code}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="font-medium">{type.name}</TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {type.description || "-"}
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {type.color || "-"}
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleEditDocumentType(type)}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Editar
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="text-destructive"
-                                onClick={() => handleDeleteDocumentTypeClick(type)}
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Excluir
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
         </TabsContent>
 
         {/* Parameters Tab */}
