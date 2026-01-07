@@ -49,7 +49,7 @@ import {
 } from "lucide-react";
 import { StatCard } from "@/components/shared/StatCard";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { format, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
+import { format, isAfter, isBefore, startOfDay, endOfDay, subDays, subWeeks, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { AuditLog } from "@/hooks/useAuditLogs";
 import { cn } from "@/lib/utils";
@@ -221,7 +221,7 @@ export default function AuditTrail() {
 
       {/* Filters */}
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="pt-6 space-y-4">
           <div className="flex flex-wrap items-center gap-4">
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -235,6 +235,61 @@ export default function AuditTrail() {
             <div className="flex flex-wrap items-center gap-2">
               <Filter className="h-4 w-4 text-muted-foreground" />
               
+              {/* Quick Period Filters */}
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const today = new Date();
+                    setStartDate(today);
+                    setEndDate(today);
+                  }}
+                  className={cn(
+                    startDate && endDate && 
+                    format(startDate, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd") &&
+                    format(endDate, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd") &&
+                    "bg-primary text-primary-foreground hover:bg-primary/90"
+                  )}
+                >
+                  Hoje
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const today = new Date();
+                    setStartDate(subWeeks(today, 1));
+                    setEndDate(today);
+                  }}
+                  className={cn(
+                    startDate && endDate &&
+                    format(startDate, "yyyy-MM-dd") === format(subWeeks(new Date(), 1), "yyyy-MM-dd") &&
+                    format(endDate, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd") &&
+                    "bg-primary text-primary-foreground hover:bg-primary/90"
+                  )}
+                >
+                  Última semana
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const today = new Date();
+                    setStartDate(subMonths(today, 1));
+                    setEndDate(today);
+                  }}
+                  className={cn(
+                    startDate && endDate &&
+                    format(startDate, "yyyy-MM-dd") === format(subMonths(new Date(), 1), "yyyy-MM-dd") &&
+                    format(endDate, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd") &&
+                    "bg-primary text-primary-foreground hover:bg-primary/90"
+                  )}
+                >
+                  Último mês
+                </Button>
+              </div>
+
               {/* Date Range Filters */}
               <Popover>
                 <PopoverTrigger asChild>
