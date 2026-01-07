@@ -8,6 +8,19 @@ type Document = Database["public"]["Tables"]["documents"]["Row"];
 type DocumentInsert = Database["public"]["Tables"]["documents"]["Insert"];
 type DocumentUpdate = Database["public"]["Tables"]["documents"]["Update"];
 
+interface DocumentVersion {
+  id: string;
+  document_id: string;
+  version: string;
+  title: string;
+  content: string | null;
+  file_url: string | null;
+  created_by: string | null;
+  created_at: string;
+  change_summary: string | null;
+  creator?: { full_name: string } | null;
+}
+
 export function useDocuments() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -58,10 +71,72 @@ export function useDocuments() {
   const getSignedUrl = async (path: string) => {
     const { data, error } = await supabase.storage
       .from('documents')
-      .createSignedUrl(path, 3600); // 1 hour expiry
+      .createSignedUrl(path, 3600);
 
     if (error) throw error;
     return data.signedUrl;
+  };
+
+  // Save current version before updating
+  const saveVersion = async (documentId: string, changeSummary?: string) => {
+    const { data: currentDoc } = await supabase
+      .from("documents")
+      .select("*")
+      .eq("id", documentId)
+      .single();
+
+    if (!currentDoc) return;
+
+    await supabase.from("document_versions").insert({
+      document_id: documentId,
+      company_id: currentDoc.company_id,
+      version: currentDoc.version || "1.0",
+      title: currentDoc.title,
+      content: currentDoc.content,
+      file_url: currentDoc.file_url,
+      created_by: user?.id,
+      change_summary: changeSummary,
+    });
+  };
+
+  // Get version history for a document
+  const useDocumentVersions = (documentId: string | null) => {
+    return useQuery({
+      queryKey: ["document-versions", documentId],
+      queryFn: async () => {
+        if (!documentId) return [];
+        
+        const { data, error } = await supabase
+          .from("document_versions")
+          .select("*")
+          .eq("document_id", documentId)
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+
+        // Fetch creator names separately
+        const creatorIds = [...new Set(data.map(v => v.created_by).filter(Boolean))];
+        let creatorsMap: Record<string, string> = {};
+        
+        if (creatorIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from("profiles")
+            .select("id, full_name")
+            .in("id", creatorIds);
+          
+          creatorsMap = (profiles || []).reduce((acc, p) => {
+            acc[p.id] = p.full_name;
+            return acc;
+          }, {} as Record<string, string>);
+        }
+
+        return data.map(v => ({
+          ...v,
+          creator: v.created_by ? { full_name: creatorsMap[v.created_by] || "Desconhecido" } : null,
+        })) as DocumentVersion[];
+      },
+      enabled: !!documentId && !!user,
+    });
   };
 
   const createDocument = useMutation({
@@ -104,7 +179,15 @@ export function useDocuments() {
   });
 
   const updateDocument = useMutation({
-    mutationFn: async ({ id, file, ...updates }: DocumentUpdate & { id: string; file?: File }) => {
+    mutationFn: async ({ 
+      id, 
+      file, 
+      changeSummary,
+      ...updates 
+    }: DocumentUpdate & { id: string; file?: File; changeSummary?: string }) => {
+      // Save current version before updating
+      await saveVersion(id, changeSummary);
+
       let fileUrl = updates.file_url;
       
       if (file) {
@@ -130,6 +213,7 @@ export function useDocuments() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["documents"] });
+      queryClient.invalidateQueries({ queryKey: ["document-versions"] });
       toast.success("Documento atualizado com sucesso!");
     },
     onError: (error) => {
@@ -140,14 +224,12 @@ export function useDocuments() {
 
   const deleteDocument = useMutation({
     mutationFn: async (id: string) => {
-      // First get the document to delete the file
       const { data: doc } = await supabase
         .from("documents")
         .select("file_url")
         .eq("id", id)
         .single();
 
-      // Delete file from storage if exists
       if (doc?.file_url) {
         await supabase.storage
           .from('documents')
@@ -167,7 +249,6 @@ export function useDocuments() {
     },
   });
 
-  // Stats calculation
   const stats = {
     total: documents.length,
     approved: documents.filter((d) => d.status === "approved").length,
@@ -184,5 +265,6 @@ export function useDocuments() {
     updateDocument,
     deleteDocument,
     getSignedUrl,
+    useDocumentVersions,
   };
 }

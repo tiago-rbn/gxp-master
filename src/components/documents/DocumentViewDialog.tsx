@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FileText, Download, Loader2, FileDown } from "lucide-react";
+import { FileText, Download, Loader2, FileDown, History } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +15,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { exportDocumentToPDF } from "@/lib/pdfExport";
 import { toast } from "sonner";
 import type { Database } from "@/integrations/supabase/types";
+import { DocumentVersionHistory } from "./DocumentVersionHistory";
+import { useDocuments } from "@/hooks/useDocuments";
 
 type Document = Database["public"]["Tables"]["documents"]["Row"] & {
   system?: { name: string } | null;
@@ -68,6 +70,10 @@ export function DocumentViewDialog({
 }: DocumentViewDialogProps) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
+  
+  const { useDocumentVersions } = useDocuments();
+  const { data: versions = [], isLoading: isLoadingVersions } = useDocumentVersions(document?.id || null);
 
   if (!document) return null;
 
@@ -211,6 +217,14 @@ export function DocumentViewDialog({
         <DialogFooter className="flex-col sm:flex-row gap-2">
           <Button 
             variant="outline" 
+            onClick={() => setShowVersionHistory(true)}
+            className="w-full sm:w-auto"
+          >
+            <History className="mr-2 h-4 w-4" />
+            Histórico ({versions.length})
+          </Button>
+          <Button 
+            variant="outline" 
             onClick={handleExportPDF}
             disabled={isExporting}
             className="w-full sm:w-auto"
@@ -230,6 +244,14 @@ export function DocumentViewDialog({
           </div>
         </DialogFooter>
       </DialogContent>
+
+      <DocumentVersionHistory
+        open={showVersionHistory}
+        onOpenChange={setShowVersionHistory}
+        versions={versions}
+        isLoading={isLoadingVersions}
+        currentContent={document.content}
+      />
     </Dialog>
   );
 }
