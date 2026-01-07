@@ -8,6 +8,34 @@ type ValidationProject = Database["public"]["Tables"]["validation_projects"]["Ro
 type ValidationProjectInsert = Database["public"]["Tables"]["validation_projects"]["Insert"];
 type ValidationProjectUpdate = Database["public"]["Tables"]["validation_projects"]["Update"];
 
+// Helper function to send project status notification
+async function sendProjectNotification(data: {
+  project_id: string;
+  project_name: string;
+  new_status: string;
+  previous_status?: string;
+  action_by_name: string;
+  action_by_email: string;
+  manager_email?: string;
+  manager_name?: string;
+  rejection_reason?: string;
+}) {
+  try {
+    const response = await supabase.functions.invoke("notify-project-status", {
+      body: data,
+    });
+    
+    if (response.error) {
+      console.error("Error sending notification:", response.error);
+    } else {
+      console.log("Notification sent successfully:", response.data);
+    }
+  } catch (error) {
+    console.error("Failed to send notification:", error);
+    // Don't throw - notifications are non-critical
+  }
+}
+
 export function useValidationProjects() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -118,6 +146,18 @@ export function useValidationProjects() {
   // Submit project for approval
   const submitForApproval = useMutation({
     mutationFn: async (id: string) => {
+      // Get project with manager info
+      const { data: project, error: fetchError } = await supabase
+        .from("validation_projects")
+        .select(`
+          *,
+          manager:profiles!validation_projects_manager_id_fkey(full_name, email)
+        `)
+        .eq("id", id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
       const { data, error } = await supabase
         .from("validation_projects")
         .update({ status: "pending" as any })
@@ -126,6 +166,26 @@ export function useValidationProjects() {
         .single();
 
       if (error) throw error;
+
+      // Get current user info for notification
+      const { data: userProfile } = await supabase
+        .from("profiles")
+        .select("full_name, email")
+        .eq("id", user!.id)
+        .single();
+
+      // Send notification
+      sendProjectNotification({
+        project_id: id,
+        project_name: project.name,
+        new_status: "pending",
+        previous_status: project.status || "draft",
+        action_by_name: userProfile?.full_name || "Usuário",
+        action_by_email: userProfile?.email || "",
+        manager_email: project.manager?.email,
+        manager_name: project.manager?.full_name,
+      });
+
       return data;
     },
     onSuccess: () => {
@@ -141,6 +201,18 @@ export function useValidationProjects() {
   // Approve project
   const approveProject = useMutation({
     mutationFn: async (id: string) => {
+      // Get project with manager info
+      const { data: project, error: fetchError } = await supabase
+        .from("validation_projects")
+        .select(`
+          *,
+          manager:profiles!validation_projects_manager_id_fkey(full_name, email)
+        `)
+        .eq("id", id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
       const { data, error } = await supabase
         .from("validation_projects")
         .update({ 
@@ -154,6 +226,26 @@ export function useValidationProjects() {
         .single();
 
       if (error) throw error;
+
+      // Get current user info for notification
+      const { data: userProfile } = await supabase
+        .from("profiles")
+        .select("full_name, email")
+        .eq("id", user!.id)
+        .single();
+
+      // Send notification
+      sendProjectNotification({
+        project_id: id,
+        project_name: project.name,
+        new_status: "approved",
+        previous_status: project.status || "pending",
+        action_by_name: userProfile?.full_name || "Usuário",
+        action_by_email: userProfile?.email || "",
+        manager_email: project.manager?.email,
+        manager_name: project.manager?.full_name,
+      });
+
       return data;
     },
     onSuccess: () => {
@@ -169,6 +261,18 @@ export function useValidationProjects() {
   // Reject project
   const rejectProject = useMutation({
     mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      // Get project with manager info
+      const { data: project, error: fetchError } = await supabase
+        .from("validation_projects")
+        .select(`
+          *,
+          manager:profiles!validation_projects_manager_id_fkey(full_name, email)
+        `)
+        .eq("id", id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
       const { data, error } = await supabase
         .from("validation_projects")
         .update({ 
@@ -182,6 +286,27 @@ export function useValidationProjects() {
         .single();
 
       if (error) throw error;
+
+      // Get current user info for notification
+      const { data: userProfile } = await supabase
+        .from("profiles")
+        .select("full_name, email")
+        .eq("id", user!.id)
+        .single();
+
+      // Send notification
+      sendProjectNotification({
+        project_id: id,
+        project_name: project.name,
+        new_status: "rejected",
+        previous_status: project.status || "pending",
+        action_by_name: userProfile?.full_name || "Usuário",
+        action_by_email: userProfile?.email || "",
+        manager_email: project.manager?.email,
+        manager_name: project.manager?.full_name,
+        rejection_reason: reason,
+      });
+
       return data;
     },
     onSuccess: () => {
@@ -197,6 +322,18 @@ export function useValidationProjects() {
   // Mark project as completed
   const completeProject = useMutation({
     mutationFn: async (id: string) => {
+      // Get project with manager info
+      const { data: project, error: fetchError } = await supabase
+        .from("validation_projects")
+        .select(`
+          *,
+          manager:profiles!validation_projects_manager_id_fkey(full_name, email)
+        `)
+        .eq("id", id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
       const { data, error } = await supabase
         .from("validation_projects")
         .update({ 
@@ -209,6 +346,26 @@ export function useValidationProjects() {
         .single();
 
       if (error) throw error;
+
+      // Get current user info for notification
+      const { data: userProfile } = await supabase
+        .from("profiles")
+        .select("full_name, email")
+        .eq("id", user!.id)
+        .single();
+
+      // Send notification
+      sendProjectNotification({
+        project_id: id,
+        project_name: project.name,
+        new_status: "completed",
+        previous_status: project.status || "approved",
+        action_by_name: userProfile?.full_name || "Usuário",
+        action_by_email: userProfile?.email || "",
+        manager_email: project.manager?.email,
+        manager_name: project.manager?.full_name,
+      });
+
       return data;
     },
     onSuccess: () => {
