@@ -14,6 +14,7 @@ import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   CheckCircle, 
   XCircle, 
@@ -22,14 +23,19 @@ import {
   AlertTriangle,
   Trophy,
   FileDown,
-  Loader2
+  Loader2,
+  FileText,
+  ListTodo,
+  Info
 } from "lucide-react";
 import { toast } from "sonner";
 import { exportProjectToPDF } from "@/lib/pdfExport";
+import { ProjectDeliverablesTab } from "./ProjectDeliverablesTab";
+import { ProjectTasksTab } from "./ProjectTasksTab";
 import type { Database } from "@/integrations/supabase/types";
 
 type ValidationProject = Database["public"]["Tables"]["validation_projects"]["Row"] & {
-  system?: { name: string } | null;
+  system?: { name: string; gamp_category?: string } | null;
   manager?: { full_name: string } | null;
   approver?: { full_name: string } | null;
 };
@@ -124,7 +130,7 @@ export function ProjectViewDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
             {project.name}
@@ -135,152 +141,183 @@ export function ProjectViewDialog({
           <DialogDescription>Detalhes do projeto de validação</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
-          {/* Approval Status Section */}
-          {(project.status === "pending" || project.status === "approved" || project.status === "rejected") && (
-            <>
-              <div className="rounded-lg border p-4 space-y-3">
-                <h4 className="font-medium flex items-center gap-2">
-                  {project.status === "pending" && <Clock className="h-4 w-4 text-yellow-500" />}
-                  {project.status === "approved" && <CheckCircle className="h-4 w-4 text-green-500" />}
-                  {project.status === "rejected" && <XCircle className="h-4 w-4 text-red-500" />}
-                  Status de Aprovação
-                </h4>
-                
-                {project.status === "pending" && (
-                  <p className="text-sm text-muted-foreground">
-                    Aguardando revisão e aprovação do gerente.
-                  </p>
-                )}
-                
-                {(project.status === "approved" || project.status === "rejected") && project.approver && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="text-muted-foreground">
-                      {project.status === "approved" ? "Aprovado" : "Rejeitado"} por:
-                    </span>
-                    <Avatar className="h-5 w-5">
-                      <AvatarFallback className="bg-primary/10 text-xs text-primary">
-                        {getInitials(project.approver.full_name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="font-medium">{project.approver.full_name}</span>
-                    {project.approved_at && (
-                      <span className="text-muted-foreground">
-                        em {new Date(project.approved_at).toLocaleDateString("pt-BR")}
-                      </span>
-                    )}
-                  </div>
-                )}
-                
-                {project.status === "rejected" && project.rejection_reason && (
-                  <div className="mt-2 rounded bg-destructive/10 p-3 border border-destructive/20">
-                    <p className="text-sm font-medium text-destructive flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4" />
-                      Motivo da Rejeição
-                    </p>
-                    <p className="text-sm mt-1">{project.rejection_reason}</p>
-                  </div>
-                )}
-              </div>
-              <Separator />
-            </>
-          )}
+        <Tabs defaultValue="info" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="info" className="gap-2">
+              <Info className="h-4 w-4" />
+              Informações
+            </TabsTrigger>
+            <TabsTrigger value="deliverables" className="gap-2">
+              <FileText className="h-4 w-4" />
+              Entregáveis
+            </TabsTrigger>
+            <TabsTrigger value="tasks" className="gap-2">
+              <ListTodo className="h-4 w-4" />
+              Tarefas
+            </TabsTrigger>
+          </TabsList>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label className="text-muted-foreground">Sistema</Label>
-              <p className="font-medium">{project.system?.name || "-"}</p>
-            </div>
-            <div>
-              <Label className="text-muted-foreground">Tipo</Label>
-              <p className="font-medium">
-                {projectTypeLabels[project.project_type || ""] || project.project_type || "-"}
-              </p>
-            </div>
-            <div>
-              <Label className="text-muted-foreground">Gerente</Label>
-              {project.manager?.full_name ? (
-                <div className="mt-1 flex items-center gap-2">
-                  <Avatar className="h-6 w-6">
-                    <AvatarFallback className="bg-primary/10 text-xs text-primary">
-                      {getInitials(project.manager.full_name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span>{project.manager.full_name}</span>
+          <TabsContent value="info" className="space-y-6 py-4">
+            {/* Approval Status Section */}
+            {(project.status === "pending" || project.status === "approved" || project.status === "rejected") && (
+              <>
+                <div className="rounded-lg border p-4 space-y-3">
+                  <h4 className="font-medium flex items-center gap-2">
+                    {project.status === "pending" && <Clock className="h-4 w-4 text-yellow-500" />}
+                    {project.status === "approved" && <CheckCircle className="h-4 w-4 text-green-500" />}
+                    {project.status === "rejected" && <XCircle className="h-4 w-4 text-red-500" />}
+                    Status de Aprovação
+                  </h4>
+                  
+                  {project.status === "pending" && (
+                    <p className="text-sm text-muted-foreground">
+                      Aguardando revisão e aprovação do gerente.
+                    </p>
+                  )}
+                  
+                  {(project.status === "approved" || project.status === "rejected") && project.approver && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-muted-foreground">
+                        {project.status === "approved" ? "Aprovado" : "Rejeitado"} por:
+                      </span>
+                      <Avatar className="h-5 w-5">
+                        <AvatarFallback className="bg-primary/10 text-xs text-primary">
+                          {getInitials(project.approver.full_name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="font-medium">{project.approver.full_name}</span>
+                      {project.approved_at && (
+                        <span className="text-muted-foreground">
+                          em {new Date(project.approved_at).toLocaleDateString("pt-BR")}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  
+                  {project.status === "rejected" && project.rejection_reason && (
+                    <div className="mt-2 rounded bg-destructive/10 p-3 border border-destructive/20">
+                      <p className="text-sm font-medium text-destructive flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4" />
+                        Motivo da Rejeição
+                      </p>
+                      <p className="text-sm mt-1">{project.rejection_reason}</p>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <p className="font-medium">-</p>
-              )}
-            </div>
-            <div>
-              <Label className="text-muted-foreground">Data de Início</Label>
-              <p className="font-medium">
-                {project.start_date
-                  ? new Date(project.start_date).toLocaleDateString("pt-BR")
-                  : "-"}
-              </p>
-            </div>
-            <div>
-              <Label className="text-muted-foreground">Data Alvo</Label>
-              <p className="font-medium">
-                {project.target_date
-                  ? new Date(project.target_date).toLocaleDateString("pt-BR")
-                  : "-"}
-              </p>
-            </div>
-            {project.completion_date && (
+                <Separator />
+              </>
+            )}
+
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-muted-foreground">Data de Conclusão</Label>
+                <Label className="text-muted-foreground">Sistema</Label>
+                <p className="font-medium">{project.system?.name || "-"}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Tipo</Label>
                 <p className="font-medium">
-                  {new Date(project.completion_date).toLocaleDateString("pt-BR")}
+                  {projectTypeLabels[project.project_type || ""] || project.project_type || "-"}
                 </p>
               </div>
+              <div>
+                <Label className="text-muted-foreground">Gerente</Label>
+                {project.manager?.full_name ? (
+                  <div className="mt-1 flex items-center gap-2">
+                    <Avatar className="h-6 w-6">
+                      <AvatarFallback className="bg-primary/10 text-xs text-primary">
+                        {getInitials(project.manager.full_name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span>{project.manager.full_name}</span>
+                  </div>
+                ) : (
+                  <p className="font-medium">-</p>
+                )}
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Data de Início</Label>
+                <p className="font-medium">
+                  {project.start_date
+                    ? new Date(project.start_date).toLocaleDateString("pt-BR")
+                    : "-"}
+                </p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Data Alvo</Label>
+                <p className="font-medium">
+                  {project.target_date
+                    ? new Date(project.target_date).toLocaleDateString("pt-BR")
+                    : "-"}
+                </p>
+              </div>
+              {project.completion_date && (
+                <div>
+                  <Label className="text-muted-foreground">Data de Conclusão</Label>
+                  <p className="font-medium">
+                    {new Date(project.completion_date).toLocaleDateString("pt-BR")}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {project.description && (
+              <div>
+                <Label className="text-muted-foreground">Descrição</Label>
+                <p className="mt-1 rounded-lg bg-muted p-3">{project.description}</p>
+              </div>
             )}
-          </div>
 
-          {project.description && (
             <div>
-              <Label className="text-muted-foreground">Descrição</Label>
-              <p className="mt-1 rounded-lg bg-muted p-3">{project.description}</p>
-            </div>
-          )}
-
-          <div>
-            <Label className="text-muted-foreground">Progresso</Label>
-            <div className="mt-2 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>{project.progress || 0}% concluído</span>
-              </div>
-              <Progress value={project.progress || 0} className="h-3" />
-            </div>
-          </div>
-
-          {/* Reject Form */}
-          {showRejectForm && (
-            <div className="space-y-3 rounded-lg border border-destructive/30 p-4 bg-destructive/5">
-              <Label>Motivo da Rejeição *</Label>
-              <Textarea
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-                placeholder="Descreva o motivo da rejeição..."
-                rows={3}
-              />
-              <div className="flex gap-2 justify-end">
-                <Button variant="outline" size="sm" onClick={() => setShowRejectForm(false)}>
-                  Cancelar
-                </Button>
-                <Button 
-                  variant="destructive" 
-                  size="sm" 
-                  onClick={handleReject}
-                  disabled={!rejectionReason.trim() || isSubmitting}
-                >
-                  Confirmar Rejeição
-                </Button>
+              <Label className="text-muted-foreground">Progresso</Label>
+              <div className="mt-2 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>{project.progress || 0}% concluído</span>
+                </div>
+                <Progress value={project.progress || 0} className="h-3" />
               </div>
             </div>
-          )}
-        </div>
+
+            {/* Reject Form */}
+            {showRejectForm && (
+              <div className="space-y-3 rounded-lg border border-destructive/30 p-4 bg-destructive/5">
+                <Label>Motivo da Rejeição *</Label>
+                <Textarea
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="Descreva o motivo da rejeição..."
+                  rows={3}
+                />
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" size="sm" onClick={() => setShowRejectForm(false)}>
+                    Cancelar
+                  </Button>
+                  <Button 
+                    variant="destructive" 
+                    size="sm" 
+                    onClick={handleReject}
+                    disabled={!rejectionReason.trim() || isSubmitting}
+                  >
+                    Confirmar Rejeição
+                  </Button>
+                </div>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="deliverables" className="py-4">
+            <ProjectDeliverablesTab 
+              projectId={project.id} 
+              gampCategory={project.system?.gamp_category}
+            />
+          </TabsContent>
+
+          <TabsContent value="tasks" className="py-4">
+            <ProjectTasksTab 
+              projectId={project.id}
+              gampCategory={project.system?.gamp_category}
+            />
+          </TabsContent>
+        </Tabs>
 
         <DialogFooter className="flex-wrap gap-2">
           <Button 
