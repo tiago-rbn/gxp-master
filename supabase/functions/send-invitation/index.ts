@@ -37,6 +37,7 @@ interface InvitationRequest {
   companyId: string;
   companyName: string;
   inviterName: string;
+  companyLogoUrl?: string;
 }
 
 function generateToken(): string {
@@ -81,7 +82,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { email, role, companyId, companyName, inviterName }: InvitationRequest = await req.json();
+    const { email, role, companyId, companyName, inviterName, companyLogoUrl }: InvitationRequest = await req.json();
 
     console.log("Sending invitation to:", email, "for company:", companyName);
 
@@ -151,6 +152,11 @@ const handler = async (req: Request): Promise<Response> => {
       reader: "Leitor",
     };
 
+    // Build header with optional company logo
+    const logoHtml = companyLogoUrl 
+      ? `<img src="${companyLogoUrl}" alt="${companyName}" style="max-height: 60px; max-width: 180px; margin-bottom: 16px; border-radius: 6px;" />`
+      : "";
+
     // Send invitation email
     const emailHtml = `
       <!DOCTYPE html>
@@ -160,7 +166,8 @@ const handler = async (req: Request): Promise<Response> => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+        <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+          ${logoHtml}
           <h1 style="color: white; margin: 0; font-size: 24px;">Você foi convidado!</h1>
         </div>
         <div style="background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
@@ -168,7 +175,7 @@ const handler = async (req: Request): Promise<Response> => {
           <p style="font-size: 16px;"><strong>${inviterName}</strong> convidou você para participar da empresa <strong>${companyName}</strong> no sistema CSV Manager.</p>
           <p style="font-size: 16px;">Seu perfil será: <strong>${roleLabels[role] || role}</strong></p>
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${acceptUrl}" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block; font-size: 16px;">Aceitar Convite</a>
+            <a href="${acceptUrl}" style="background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block; font-size: 16px;">Aceitar Convite</a>
           </div>
           <p style="font-size: 14px; color: #6b7280;">Se o botão não funcionar, copie e cole este link no seu navegador:</p>
           <p style="font-size: 12px; color: #6b7280; word-break: break-all;">${acceptUrl}</p>

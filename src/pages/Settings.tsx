@@ -287,6 +287,7 @@ export default function Settings() {
       companyId: company.id,
       companyName: company.name,
       inviterName,
+      companyLogoUrl: company.logo_url || undefined,
     });
     setInviteDialogOpen(false);
   };
