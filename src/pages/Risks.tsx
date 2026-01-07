@@ -257,14 +257,6 @@ export default function Risks() {
                   </SelectContent>
                 </Select>
               )}
-                <SelectContent>
-                  <SelectItem value="all">Todos Níveis</SelectItem>
-                  <SelectItem value="critical">Crítico</SelectItem>
-                  <SelectItem value="high">Alto</SelectItem>
-                  <SelectItem value="medium">Médio</SelectItem>
-                  <SelectItem value="low">Baixo</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
           </div>
         </CardContent>
