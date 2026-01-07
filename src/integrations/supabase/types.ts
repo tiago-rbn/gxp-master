@@ -1198,6 +1198,18 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      populate_default_deliverable_templates: {
+        Args: { _company_id: string }
+        Returns: undefined
+      }
+      populate_default_task_templates: {
+        Args: { _company_id: string }
+        Returns: undefined
+      }
+      populate_default_templates: {
+        Args: { _company_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "super_admin" | "admin" | "validator" | "responsible" | "reader"
