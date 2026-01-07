@@ -47,14 +47,16 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
+  BarChart3,
 } from "lucide-react";
 import { StatCard } from "@/components/shared/StatCard";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { RTMCoverageDashboard } from "@/components/rtm/RTMCoverageDashboard";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export default function RTM() {
-  const [activeTab, setActiveTab] = useState("requirements");
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [search, setSearch] = useState("");
 
   // Requirements state
@@ -273,6 +275,10 @@ export default function RTM() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="flex items-center justify-between">
           <TabsList>
+            <TabsTrigger value="dashboard" className="gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Dashboard
+            </TabsTrigger>
             <TabsTrigger value="requirements">Requisitos</TabsTrigger>
             <TabsTrigger value="testcases">Casos de Teste</TabsTrigger>
             <TabsTrigger value="matrix">Matriz RTM</TabsTrigger>
@@ -308,6 +314,15 @@ export default function RTM() {
             )}
           </div>
         </div>
+
+        {/* Dashboard Tab */}
+        <TabsContent value="dashboard" className="mt-4">
+          <RTMCoverageDashboard
+            requirements={requirements}
+            testCases={testCases}
+            rtmLinks={rtmLinks}
+          />
+        </TabsContent>
 
         {/* Requirements Tab */}
         <TabsContent value="requirements" className="mt-4">
