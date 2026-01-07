@@ -47,7 +47,7 @@ export function useValidationProjects() {
         .from("validation_projects")
         .select(`
           *,
-          system:systems(name),
+          system:systems(name, gamp_category),
           manager:profiles!validation_projects_manager_id_fkey(full_name)
         `)
         .order("created_at", { ascending: false });
