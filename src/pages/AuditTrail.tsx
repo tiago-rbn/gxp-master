@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuditLogs } from "@/hooks/useAuditLogs";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -193,7 +194,8 @@ export default function AuditTrail() {
   };
 
   return (
-    <div className="space-y-6">
+    <AppLayout>
+      <div className="space-y-6">
       <PageHeader
         title="Trilha de Auditoria"
         description="Histórico de todas as alterações no sistema"
@@ -513,6 +515,7 @@ export default function AuditTrail() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </AppLayout>
   );
 }
