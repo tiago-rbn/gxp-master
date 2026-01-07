@@ -177,6 +177,53 @@ export type Database = {
         }
         Relationships: []
       }
+      document_versions: {
+        Row: {
+          change_summary: string | null
+          company_id: string
+          content: string | null
+          created_at: string
+          created_by: string | null
+          document_id: string
+          file_url: string | null
+          id: string
+          title: string
+          version: string
+        }
+        Insert: {
+          change_summary?: string | null
+          company_id: string
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          document_id: string
+          file_url?: string | null
+          id?: string
+          title: string
+          version: string
+        }
+        Update: {
+          change_summary?: string | null
+          company_id?: string
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          document_id?: string
+          file_url?: string | null
+          id?: string
+          title?: string
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_versions_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
           approved_at: string | null
