@@ -67,6 +67,8 @@ interface RiskFormDialogProps {
   risk?: RiskAssessment | null;
   onSubmit: (values: RiskFormValues) => void;
   isLoading?: boolean;
+  prefilledSystemId?: string | null;
+  prefilledSystemName?: string | null;
 }
 
 function calculateRiskLevel(probability: number, severity: number, detectability: number): "low" | "medium" | "high" | "critical" {
@@ -83,6 +85,8 @@ export function RiskFormDialog({
   risk,
   onSubmit,
   isLoading,
+  prefilledSystemId,
+  prefilledSystemName,
 }: RiskFormDialogProps) {
   const { data: systems = [] } = useSystemsForSelect();
   const { data: profiles = [] } = useProfiles();
@@ -144,12 +148,18 @@ export function RiskFormDialog({
         tags: riskTags,
       });
     } else {
-      setTags([]);
+      // Check for prefilled values from URL params (e.g., creating IRA from Systems page)
+      const systemId = prefilledSystemId || "";
+      const systemName = prefilledSystemName || "";
+      const initialTags: string[] = systemName ? [`sistema:${systemName}`] : [];
+      const initialTitle = systemName ? `IRA - ${systemName}` : "";
+      
+      setTags(initialTags);
       form.reset({
-        title: "",
+        title: initialTitle,
         description: "",
         assessment_type: "IRA",
-        system_id: "",
+        system_id: systemId,
         probability: 5,
         severity: 5,
         detectability: 5,
@@ -160,10 +170,10 @@ export function RiskFormDialog({
         assessor_id: "",
         approver_id: "",
         reviewer_id: "",
-        tags: [],
+        tags: initialTags,
       });
     }
-  }, [risk, form]);
+  }, [risk, form, prefilledSystemId, prefilledSystemName]);
 
   const handleAddTag = () => {
     if (tagInput.trim() && !tags.includes(tagInput.trim())) {

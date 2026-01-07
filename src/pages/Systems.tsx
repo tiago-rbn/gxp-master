@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, Trash2, Loader2, Upload } from "lucide-react";
+import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, Trash2, Loader2, Upload, AlertTriangle, CheckCircle, ShieldAlert } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { GampBadge } from "@/components/shared/GampBadge";
@@ -28,18 +28,35 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useSystems } from "@/hooks/useSystems";
+import { useSystemsWithIRAStatus, calculateRiskScore, getRiskScoreColor } from "@/hooks/useSystemIRA";
 import { SystemFormDialog } from "@/components/systems/SystemFormDialog";
 import { SystemViewDialog } from "@/components/systems/SystemViewDialog";
 import { DeleteSystemDialog } from "@/components/systems/DeleteSystemDialog";
 import { ImportSystemsDialog, ParsedSystem } from "@/components/systems/ImportSystemsDialog";
 import type { Database } from "@/integrations/supabase/types";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 type System = Database["public"]["Tables"]["systems"]["Row"] & {
   responsible?: { full_name: string } | null;
   system_owner?: { full_name: string } | null;
   process_owner?: { full_name: string } | null;
+  ira?: {
+    id: string;
+    risk_level: string | null;
+    status: string | null;
+    probability: number | null;
+    severity: number | null;
+    detectability: number | null;
+  } | null;
+  hasIRA?: boolean;
 };
 
 const gampCategoryMap: Record<string, 1 | 3 | 4 | 5> = {
@@ -83,10 +100,17 @@ export default function Systems() {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [selectedSystem, setSelectedSystem] = useState<System | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const navigate = useNavigate();
 
-  const { systems, isLoading, createSystem, updateSystem, deleteSystem } = useSystems();
+  const { systems, isLoading: isLoadingSystems, createSystem, updateSystem, deleteSystem } = useSystems();
+  const { data: systemsWithIRA = [], isLoading: isLoadingIRA } = useSystemsWithIRAStatus();
 
-  const filteredSystems = systems.filter((system) => {
+  const isLoading = isLoadingSystems || isLoadingIRA;
+
+  // Use systems with IRA status if available, otherwise fall back to regular systems
+  const systemsData = systemsWithIRA.length > 0 ? systemsWithIRA : systems;
+
+  const filteredSystems = systemsData.filter((system) => {
     const matchesSearch =
       system.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (system.vendor?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
@@ -96,6 +120,10 @@ export default function Systems() {
       statusFilter === "all" || system.validation_status === statusFilter;
     return matchesSearch && matchesCategory && matchesStatus;
   });
+
+  const handleCreateIRA = (system: System) => {
+    navigate(`/risks?createIRA=true&systemId=${system.id}&systemName=${encodeURIComponent(system.name)}`);
+  };
 
   const handleCreate = () => {
     setSelectedSystem(null);
@@ -277,11 +305,10 @@ export default function Systems() {
                 <TableRow>
                   <TableHead>Sistema</TableHead>
                   <TableHead>Fornecedor</TableHead>
-                  <TableHead>Versão</TableHead>
                   <TableHead>Categoria GAMP</TableHead>
                   <TableHead>Criticidade</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Responsável</TableHead>
+                  <TableHead>IRA Status</TableHead>
+                  <TableHead>Status Validação</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -291,16 +318,20 @@ export default function Systems() {
                   const criticality = criticalityConfig[system.criticality || "medium"];
                   const statusLabel = validationStatusLabels[system.validation_status || "not_started"];
                   const statusColor = validationStatusColors[system.validation_status || "not_started"];
+                  const hasIRA = (system as System).hasIRA;
+                  const ira = (system as System).ira;
+                  const riskScore = ira?.probability && ira?.severity && ira?.detectability
+                    ? calculateRiskScore(ira.probability, ira.severity, ira.detectability)
+                    : null;
 
                   return (
                     <TableRow
                       key={system.id}
                       className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => handleView(system)}
+                      onClick={() => handleView(system as System)}
                     >
                       <TableCell className="font-medium">{system.name}</TableCell>
                       <TableCell>{system.vendor || "-"}</TableCell>
-                      <TableCell>{system.version || "-"}</TableCell>
                       <TableCell>
                         <GampBadge category={gampNum} />
                       </TableCell>
@@ -310,11 +341,43 @@ export default function Systems() {
                         </Badge>
                       </TableCell>
                       <TableCell>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div>
+                                {hasIRA ? (
+                                  <Badge variant="outline" className="border-success/20 bg-success/10 text-success gap-1">
+                                    <CheckCircle className="h-3 w-3" />
+                                    RPN: {riskScore}
+                                  </Badge>
+                                ) : (
+                                  <Badge 
+                                    variant="outline" 
+                                    className="border-warning/20 bg-warning/10 text-warning gap-1 cursor-pointer"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleCreateIRA(system as System);
+                                    }}
+                                  >
+                                    <AlertTriangle className="h-3 w-3" />
+                                    Pendente
+                                  </Badge>
+                                )}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {hasIRA 
+                                ? `IRA concluída - Risk Score: ${riskScore}` 
+                                : "Clique para realizar a Avaliação de Risco Inicial"}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </TableCell>
+                      <TableCell>
                         <Badge variant="outline" className={statusColor}>
                           {statusLabel}
                         </Badge>
                       </TableCell>
-                      <TableCell>{system.responsible?.full_name || "-"}</TableCell>
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -326,16 +389,27 @@ export default function Systems() {
                             <DropdownMenuItem
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleView(system);
+                                handleView(system as System);
                               }}
                             >
                               <Eye className="mr-2 h-4 w-4" />
                               Visualizar
                             </DropdownMenuItem>
+                            {!hasIRA && (
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCreateIRA(system as System);
+                                }}
+                              >
+                                <ShieldAlert className="mr-2 h-4 w-4" />
+                                Criar IRA
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleEdit(system);
+                                handleEdit(system as System);
                               }}
                             >
                               <Edit className="mr-2 h-4 w-4" />
@@ -345,7 +419,7 @@ export default function Systems() {
                               className="text-destructive"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleDelete(system);
+                                handleDelete(system as System);
                               }}
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
