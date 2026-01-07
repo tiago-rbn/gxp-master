@@ -1,4 +1,4 @@
-// Mock data for CSVOne prototype
+// Mock data for CSV System prototype
 
 export interface System {
   id: string;
