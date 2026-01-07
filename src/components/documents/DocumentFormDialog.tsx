@@ -44,6 +44,7 @@ const documentSchema = z.object({
   system_id: z.string().optional(),
   project_id: z.string().optional(),
   status: z.enum(["draft", "pending", "approved", "rejected", "completed", "cancelled"]),
+  changeSummary: z.string().optional(),
 });
 
 type DocumentFormValues = z.infer<typeof documentSchema>;
@@ -81,6 +82,7 @@ export function DocumentFormDialog({
       system_id: "",
       project_id: "",
       status: "draft",
+      changeSummary: "",
     },
   });
 
@@ -94,6 +96,7 @@ export function DocumentFormDialog({
         system_id: document.system_id || "",
         project_id: document.project_id || "",
         status: (document.status as "draft" | "pending" | "approved" | "rejected" | "completed" | "cancelled") || "draft",
+        changeSummary: "",
       });
     } else if (initialContent) {
       form.reset({
@@ -104,6 +107,7 @@ export function DocumentFormDialog({
         system_id: "",
         project_id: "",
         status: "draft",
+        changeSummary: "",
       });
     } else {
       form.reset({
@@ -114,6 +118,7 @@ export function DocumentFormDialog({
         system_id: "",
         project_id: "",
         status: "draft",
+        changeSummary: "",
       });
       setSelectedFile(null);
     }
@@ -306,6 +311,29 @@ export function DocumentFormDialog({
                 </FormItem>
               )}
             />
+
+            {/* Change Summary - Only for editing */}
+            {document && (
+              <FormField
+                control={form.control}
+                name="changeSummary"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Resumo das Alterações</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Ex: Correção de requisitos de segurança, atualização de fluxo..."
+                        {...field}
+                      />
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground">
+                      Descreva brevemente o que foi alterado nesta versão
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             {/* File Upload */}
             <div className="space-y-2">

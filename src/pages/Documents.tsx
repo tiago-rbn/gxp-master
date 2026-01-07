@@ -121,15 +121,16 @@ export default function Documents() {
   };
 
   const handleFormSubmit = (values: any) => {
+    const { changeSummary, ...rest } = values;
     const payload = {
-      ...values,
-      system_id: values.system_id || null,
-      project_id: values.project_id || null,
+      ...rest,
+      system_id: rest.system_id || null,
+      project_id: rest.project_id || null,
     };
 
     if (selectedDocument) {
       updateDocument.mutate(
-        { id: selectedDocument.id, ...payload },
+        { id: selectedDocument.id, changeSummary, ...payload },
         { onSuccess: () => setIsFormOpen(false) }
       );
     } else {
