@@ -61,10 +61,12 @@ function getInitials(name: string): string {
     .slice(0, 2);
 }
 
-function getProgressColor(progress: number) {
-  if (progress === 100) return "bg-success";
+function getProgressColor(progress: number): string {
+  if (progress === 100) return "bg-green-500";
+  if (progress >= 75) return "bg-emerald-500";
   if (progress >= 50) return "bg-primary";
-  return "bg-warning";
+  if (progress >= 25) return "bg-amber-500";
+  return "bg-orange-500";
 }
 
 export default function Projects() {
@@ -298,7 +300,8 @@ export default function Projects() {
                     </div>
                     <Progress
                       value={project.progress || 0}
-                      className={getProgressColor(project.progress || 0)}
+                      className="h-2"
+                      indicatorClassName={getProgressColor(project.progress || 0)}
                     />
                   </div>
                   <div className="flex items-center gap-4 text-sm">
