@@ -13,6 +13,11 @@ interface DocumentData {
   approver?: { full_name: string } | null;
 }
 
+interface ExportOptions {
+  companyLogo?: string | null;
+  companyName?: string | null;
+}
+
 const documentTypeLabels: Record<string, string> = {
   URS: "User Requirements Specification",
   FS: "Functional Specification",
@@ -36,12 +41,34 @@ const statusLabels: Record<string, string> = {
   cancelled: "Cancelado",
 };
 
-export function exportDocumentToPDF(document: DocumentData): void {
+// Helper to load image as base64
+async function loadImageAsBase64(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+export async function exportDocumentToPDF(document: DocumentData, options?: ExportOptions): Promise<void> {
   const pdf = new jsPDF({
     orientation: "portrait",
     unit: "mm",
     format: "a4",
   });
+
+  // Load company logo if provided
+  let logoBase64: string | null = null;
+  if (options?.companyLogo) {
+    logoBase64 = await loadImageAsBase64(options.companyLogo);
+  }
 
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
@@ -64,26 +91,43 @@ export function exportDocumentToPDF(document: DocumentData): void {
 
   // Header with document type
   pdf.setFillColor(59, 130, 246); // Blue color
-  pdf.rect(0, 0, pageWidth, 35, "F");
+  pdf.rect(0, 0, pageWidth, 40, "F");
+  
+  // Add company logo if available
+  let textStartX = margin;
+  if (logoBase64) {
+    try {
+      pdf.addImage(logoBase64, 'AUTO', margin, 5, 30, 30);
+      textStartX = margin + 35;
+    } catch (e) {
+      console.warn('Failed to add logo to PDF:', e);
+    }
+  }
   
   pdf.setTextColor(255, 255, 255);
   pdf.setFontSize(12);
   pdf.setFont("helvetica", "bold");
-  pdf.text(document.document_type, margin, 15);
+  pdf.text(document.document_type, textStartX, 15);
   
   pdf.setFontSize(8);
   pdf.setFont("helvetica", "normal");
-  pdf.text(documentTypeLabels[document.document_type] || document.document_type, margin, 22);
+  pdf.text(documentTypeLabels[document.document_type] || document.document_type, textStartX, 22);
+
+  // Company name if available
+  if (options?.companyName) {
+    pdf.setFontSize(8);
+    pdf.text(options.companyName, pageWidth - margin, 10, { align: "right" });
+  }
 
   // Title
   pdf.setFontSize(16);
   pdf.setFont("helvetica", "bold");
-  const titleLines = pdf.splitTextToSize(document.title, contentWidth);
+  const titleLines = pdf.splitTextToSize(document.title, contentWidth - (logoBase64 ? 35 : 0));
   titleLines.forEach((line: string, index: number) => {
-    pdf.text(line, margin, 30 + index * 6);
+    pdf.text(line, textStartX, 32 + index * 6);
   });
 
-  yPosition = 45;
+  yPosition = 50;
   pdf.setTextColor(0, 0, 0);
 
   // Metadata section
@@ -259,12 +303,18 @@ const projectTypeLabels: Record<string, string> = {
   periodic_review: "Revisão Periódica",
 };
 
-export function exportProjectToPDF(project: ProjectData): void {
+export async function exportProjectToPDF(project: ProjectData, options?: ExportOptions): Promise<void> {
   const pdf = new jsPDF({
     orientation: "portrait",
     unit: "mm",
     format: "a4",
   });
+
+  // Load company logo if provided
+  let logoBase64: string | null = null;
+  if (options?.companyLogo) {
+    logoBase64 = await loadImageAsBase64(options.companyLogo);
+  }
 
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
@@ -274,21 +324,38 @@ export function exportProjectToPDF(project: ProjectData): void {
 
   // Header
   pdf.setFillColor(16, 185, 129); // Green color
-  pdf.rect(0, 0, pageWidth, 40, "F");
+  pdf.rect(0, 0, pageWidth, 45, "F");
   
+  // Add company logo if available
+  let textStartX = margin;
+  if (logoBase64) {
+    try {
+      pdf.addImage(logoBase64, 'AUTO', margin, 5, 35, 35);
+      textStartX = margin + 40;
+    } catch (e) {
+      console.warn('Failed to add logo to PDF:', e);
+    }
+  }
+
   pdf.setTextColor(255, 255, 255);
   pdf.setFontSize(10);
   pdf.setFont("helvetica", "normal");
-  pdf.text("RELATÓRIO DE PROJETO DE VALIDAÇÃO", margin, 15);
+  pdf.text("RELATÓRIO DE PROJETO DE VALIDAÇÃO", textStartX, 15);
+
+  // Company name if available
+  if (options?.companyName) {
+    pdf.setFontSize(8);
+    pdf.text(options.companyName, pageWidth - margin, 10, { align: "right" });
+  }
   
   pdf.setFontSize(16);
   pdf.setFont("helvetica", "bold");
-  const titleLines = pdf.splitTextToSize(project.name, contentWidth);
+  const titleLines = pdf.splitTextToSize(project.name, contentWidth - (logoBase64 ? 40 : 0));
   titleLines.forEach((line: string, index: number) => {
-    pdf.text(line, margin, 26 + index * 7);
+    pdf.text(line, textStartX, 26 + index * 7);
   });
 
-  yPosition = 50;
+  yPosition = 55;
   pdf.setTextColor(0, 0, 0);
 
   // Status and Progress Section
