@@ -31,6 +31,7 @@ import { useProfiles, Profile } from "@/hooks/useProfiles";
 import { useDocumentTemplates, DocumentTemplate } from "@/hooks/useDocumentTemplates";
 import { useDocumentTypes, DocumentType } from "@/hooks/useDocumentTypes";
 import { useInvitations } from "@/hooks/useInvitations";
+import { usePermissions, PermissionRow } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserFormDialog } from "@/components/settings/UserFormDialog";
 import { TemplateFormDialog } from "@/components/settings/TemplateFormDialog";
@@ -41,6 +42,8 @@ import { DeleteDocumentTypeDialog } from "@/components/settings/DeleteDocumentTy
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Lock } from "lucide-react";
 
 function getInitials(name: string): string {
   return name
@@ -74,6 +77,8 @@ export default function Settings() {
   const { templates, isLoading: templatesLoading, addTemplate, updateTemplate, deleteTemplate } = useDocumentTemplates();
   const { invitations, isLoading: invitationsLoading, sendInvitation, cancelInvitation, resendInvitation } = useInvitations();
   const { documentTypes, isLoading: documentTypesLoading, addDocumentType, updateDocumentType, deleteDocumentType } = useDocumentTypes();
+  const { permissions, isLoading: permissionsLoading, savePermissions, canEditPermissions } = usePermissions();
+  const [localPermissions, setLocalPermissions] = useState<PermissionRow[]>([]);
 
   // Company form state
   const [companyForm, setCompanyForm] = useState({
@@ -126,6 +131,22 @@ export default function Settings() {
       setDocumentExpirationDays(settings.document_expiration_days || 365);
     }
   }, [company]);
+
+  useEffect(() => {
+    if (permissions.length > 0) {
+      setLocalPermissions(permissions);
+    }
+  }, [permissions]);
+
+  const handlePermissionChange = (module: string, role: "admin_access" | "validator_access" | "responsible_access" | "reader_access", value: boolean) => {
+    setLocalPermissions((prev) =>
+      prev.map((p) => (p.module === module ? { ...p, [role]: value } : p))
+    );
+  };
+
+  const handleSavePermissions = async () => {
+    await savePermissions.mutateAsync(localPermissions);
+  };
 
   const handleSaveCompany = async () => {
     if (!company) return;
@@ -579,51 +600,73 @@ export default function Settings() {
               <CardDescription>Configure as permissões por perfil de usuário</CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Módulo</TableHead>
-                    <TableHead className="text-center">Admin</TableHead>
-                    <TableHead className="text-center">Validador</TableHead>
-                    <TableHead className="text-center">Responsável</TableHead>
-                    <TableHead className="text-center">Leitor</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {[
-                    { module: "Dashboard", admin: true, validator: true, responsible: true, reader: true },
-                    { module: "Inventário de Sistemas", admin: true, validator: true, responsible: true, reader: true },
-                    { module: "Criar/Editar Sistemas", admin: true, validator: true, responsible: false, reader: false },
-                    { module: "Gerenciamento de Riscos", admin: true, validator: true, responsible: true, reader: true },
-                    { module: "Criar/Editar Riscos", admin: true, validator: true, responsible: false, reader: false },
-                    { module: "Projetos de Validação", admin: true, validator: true, responsible: true, reader: true },
-                    { module: "Criar/Editar Projetos", admin: true, validator: true, responsible: false, reader: false },
-                    { module: "Documentação", admin: true, validator: true, responsible: true, reader: true },
-                    { module: "Aprovar Documentos", admin: true, validator: true, responsible: false, reader: false },
-                    { module: "Gerenciamento de Mudanças", admin: true, validator: true, responsible: true, reader: true },
-                    { module: "Configurações", admin: true, validator: false, responsible: false, reader: false },
-                  ].map((row) => (
-                    <TableRow key={row.module}>
-                      <TableCell className="font-medium">{row.module}</TableCell>
-                      <TableCell className="text-center">
-                        <Switch checked={row.admin} disabled />
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Switch checked={row.validator} />
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Switch checked={row.responsible} />
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Switch checked={row.reader} />
-                      </TableCell>
+              {!canEditPermissions && (
+                <Alert className="mb-4">
+                  <Lock className="h-4 w-4" />
+                  <AlertDescription>
+                    Somente usuários Admin ou Super Admin podem editar a matriz de permissões.
+                  </AlertDescription>
+                </Alert>
+              )}
+              {permissionsLoading ? (
+                <div className="flex h-32 items-center justify-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Módulo</TableHead>
+                      <TableHead className="text-center">Admin</TableHead>
+                      <TableHead className="text-center">Validador</TableHead>
+                      <TableHead className="text-center">Responsável</TableHead>
+                      <TableHead className="text-center">Leitor</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              <div className="mt-4 flex justify-end">
-                <Button>Salvar Permissões</Button>
-              </div>
+                  </TableHeader>
+                  <TableBody>
+                    {localPermissions.map((row) => (
+                      <TableRow key={row.module}>
+                        <TableCell className="font-medium">{row.module}</TableCell>
+                        <TableCell className="text-center">
+                          <Switch
+                            checked={row.admin_access}
+                            disabled={!canEditPermissions}
+                            onCheckedChange={(val) => handlePermissionChange(row.module, "admin_access", val)}
+                          />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Switch
+                            checked={row.validator_access}
+                            disabled={!canEditPermissions}
+                            onCheckedChange={(val) => handlePermissionChange(row.module, "validator_access", val)}
+                          />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Switch
+                            checked={row.responsible_access}
+                            disabled={!canEditPermissions}
+                            onCheckedChange={(val) => handlePermissionChange(row.module, "responsible_access", val)}
+                          />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Switch
+                            checked={row.reader_access}
+                            disabled={!canEditPermissions}
+                            onCheckedChange={(val) => handlePermissionChange(row.module, "reader_access", val)}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+              {canEditPermissions && (
+                <div className="mt-4 flex justify-end">
+                  <Button onClick={handleSavePermissions} disabled={savePermissions.isPending}>
+                    {savePermissions.isPending ? "Salvando..." : "Salvar Permissões"}
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

@@ -368,6 +368,50 @@ export type Database = {
           },
         ]
       }
+      permissions_matrix: {
+        Row: {
+          admin_access: boolean | null
+          company_id: string
+          created_at: string
+          id: string
+          module: string
+          reader_access: boolean | null
+          responsible_access: boolean | null
+          updated_at: string
+          validator_access: boolean | null
+        }
+        Insert: {
+          admin_access?: boolean | null
+          company_id: string
+          created_at?: string
+          id?: string
+          module: string
+          reader_access?: boolean | null
+          responsible_access?: boolean | null
+          updated_at?: string
+          validator_access?: boolean | null
+        }
+        Update: {
+          admin_access?: boolean | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          module?: string
+          reader_access?: boolean | null
+          responsible_access?: boolean | null
+          updated_at?: string
+          validator_access?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permissions_matrix_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -601,6 +645,7 @@ export type Database = {
       }
       systems: {
         Row: {
+          bpx_relevant: boolean | null
           company_id: string
           created_at: string
           criticality: Database["public"]["Enums"]["risk_level"] | null
@@ -609,10 +654,13 @@ export type Database = {
           gamp_category: Database["public"]["Enums"]["gamp_category"]
           gxp_impact: boolean | null
           id: string
+          installation_location: string | null
           last_validation_date: string | null
           name: string
           next_revalidation_date: string | null
+          process_owner_id: string | null
           responsible_id: string | null
+          system_owner_id: string | null
           updated_at: string
           validation_status:
             | Database["public"]["Enums"]["validation_status"]
@@ -621,6 +669,7 @@ export type Database = {
           version: string | null
         }
         Insert: {
+          bpx_relevant?: boolean | null
           company_id: string
           created_at?: string
           criticality?: Database["public"]["Enums"]["risk_level"] | null
@@ -629,10 +678,13 @@ export type Database = {
           gamp_category: Database["public"]["Enums"]["gamp_category"]
           gxp_impact?: boolean | null
           id?: string
+          installation_location?: string | null
           last_validation_date?: string | null
           name: string
           next_revalidation_date?: string | null
+          process_owner_id?: string | null
           responsible_id?: string | null
+          system_owner_id?: string | null
           updated_at?: string
           validation_status?:
             | Database["public"]["Enums"]["validation_status"]
@@ -641,6 +693,7 @@ export type Database = {
           version?: string | null
         }
         Update: {
+          bpx_relevant?: boolean | null
           company_id?: string
           created_at?: string
           criticality?: Database["public"]["Enums"]["risk_level"] | null
@@ -649,10 +702,13 @@ export type Database = {
           gamp_category?: Database["public"]["Enums"]["gamp_category"]
           gxp_impact?: boolean | null
           id?: string
+          installation_location?: string | null
           last_validation_date?: string | null
           name?: string
           next_revalidation_date?: string | null
+          process_owner_id?: string | null
           responsible_id?: string | null
+          system_owner_id?: string | null
           updated_at?: string
           validation_status?:
             | Database["public"]["Enums"]["validation_status"]
@@ -669,8 +725,22 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "systems_process_owner_id_fkey"
+            columns: ["process_owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "systems_responsible_id_fkey"
             columns: ["responsible_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "systems_system_owner_id_fkey"
+            columns: ["system_owner_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]

@@ -14,6 +14,8 @@ import type { Database } from "@/integrations/supabase/types";
 
 type System = Database["public"]["Tables"]["systems"]["Row"] & {
   responsible?: { full_name: string } | null;
+  system_owner?: { full_name: string } | null;
+  process_owner?: { full_name: string } | null;
 };
 
 interface SystemViewDialogProps {
@@ -28,12 +30,14 @@ const validationStatusLabels: Record<string, string> = {
   in_progress: "Em Andamento",
   validated: "Validado",
   expired: "Expirado",
+  pending_revalidation: "Revalidação Pendente",
 };
 
 const criticalityLabels: Record<string, { label: string; className: string }> = {
   low: { label: "Baixa", className: "border-success/20 bg-success/10 text-success" },
   medium: { label: "Média", className: "border-warning/20 bg-warning/10 text-warning" },
   high: { label: "Alta", className: "border-destructive/20 bg-destructive/10 text-destructive" },
+  critical: { label: "Crítica", className: "border-destructive/20 bg-destructive/10 text-destructive" },
 };
 
 const gampCategoryMap: Record<string, 1 | 3 | 4 | 5> = {
@@ -41,6 +45,12 @@ const gampCategoryMap: Record<string, 1 | 3 | 4 | 5> = {
   "3": 3,
   "4": 4,
   "5": 5,
+};
+
+const installationLabels: Record<string, string> = {
+  on_premise: "On-Premise",
+  cloud: "Nuvem",
+  hybrid: "Híbrido",
 };
 
 export function SystemViewDialog({
@@ -56,7 +66,7 @@ export function SystemViewDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{system.name}</DialogTitle>
           <DialogDescription>Detalhes do sistema</DialogDescription>
@@ -95,6 +105,16 @@ export function SystemViewDialog({
               <p className="font-medium">{system.data_integrity_impact ? "Sim" : "Não"}</p>
             </div>
             <div>
+              <Label className="text-muted-foreground">BPx Relevante</Label>
+              <p className="font-medium">{system.bpx_relevant ? "Sim" : "Não"}</p>
+            </div>
+            <div>
+              <Label className="text-muted-foreground">Local de Instalação</Label>
+              <p className="font-medium">
+                {installationLabels[system.installation_location || "on_premise"]}
+              </p>
+            </div>
+            <div>
               <Label className="text-muted-foreground">Status de Validação</Label>
               <p className="font-medium">
                 {validationStatusLabels[system.validation_status || "not_started"]}
@@ -103,6 +123,14 @@ export function SystemViewDialog({
             <div>
               <Label className="text-muted-foreground">Responsável</Label>
               <p className="font-medium">{system.responsible?.full_name || "-"}</p>
+            </div>
+            <div>
+              <Label className="text-muted-foreground">Dono do Sistema</Label>
+              <p className="font-medium">{system.system_owner?.full_name || "-"}</p>
+            </div>
+            <div>
+              <Label className="text-muted-foreground">Dono do Processo</Label>
+              <p className="font-medium">{system.process_owner?.full_name || "-"}</p>
             </div>
             {system.last_validation_date && (
               <div>
