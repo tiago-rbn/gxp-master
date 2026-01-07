@@ -147,6 +147,9 @@ export function RiskViewDialog({
     }
   };
 
+  // IRA type only shows Details, Team, and Mitigation tabs
+  const isIRA = risk.assessment_type === "IRA";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -162,14 +165,14 @@ export function RiskViewDialog({
         </DialogHeader>
 
         <Tabs defaultValue="details" className="w-full">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className={`grid w-full ${isIRA ? "grid-cols-3" : "grid-cols-7"}`}>
             <TabsTrigger value="details">Detalhes</TabsTrigger>
             <TabsTrigger value="team">Responsáveis</TabsTrigger>
-            <TabsTrigger value="requirements">Requisitos</TabsTrigger>
-            <TabsTrigger value="testcases">Testes</TabsTrigger>
+            {!isIRA && <TabsTrigger value="requirements">Requisitos</TabsTrigger>}
+            {!isIRA && <TabsTrigger value="testcases">Testes</TabsTrigger>}
             <TabsTrigger value="mitigation">Mitigação</TabsTrigger>
-            <TabsTrigger value="traceability">Rastreabilidade</TabsTrigger>
-            <TabsTrigger value="matrix">Matriz</TabsTrigger>
+            {!isIRA && <TabsTrigger value="traceability">Rastreabilidade</TabsTrigger>}
+            {!isIRA && <TabsTrigger value="matrix">Matriz</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="details" className="space-y-4 pt-4">
@@ -296,146 +299,154 @@ export function RiskViewDialog({
             </div>
           </TabsContent>
 
-          <TabsContent value="requirements" className="space-y-4 pt-4">
-            <div className="flex gap-2">
-              <Select value={selectedRequirement} onValueChange={setSelectedRequirement}>
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Selecione um requisito para vincular..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableRequirements.map((req) => (
-                    <SelectItem key={req.id} value={req.id}>
-                      {req.code} - {req.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button onClick={handleAddRequirement} disabled={!selectedRequirement}>
-                <Plus className="h-4 w-4 mr-1" />
-                Vincular
-              </Button>
-            </div>
+          {!isIRA && (
+            <TabsContent value="requirements" className="space-y-4 pt-4">
+              <div className="flex gap-2">
+                <Select value={selectedRequirement} onValueChange={setSelectedRequirement}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Selecione um requisito para vincular..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableRequirements.map((req) => (
+                      <SelectItem key={req.id} value={req.id}>
+                        {req.code} - {req.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button onClick={handleAddRequirement} disabled={!selectedRequirement}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Vincular
+                </Button>
+              </div>
 
-            <div className="space-y-2">
-              {requirementLinks.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-                  <FileText className="h-8 w-8 mb-2" />
-                  <p>Nenhum requisito vinculado a este risco</p>
-                </div>
-              ) : (
-                requirementLinks.map((link: any) => (
-                  <Card key={link.id}>
-                    <CardContent className="flex items-center justify-between p-3">
-                      <div>
-                        <Badge variant="outline" className="mr-2">{link.requirement?.code}</Badge>
-                        <span className="font-medium">{link.requirement?.title}</span>
-                        <Badge variant="secondary" className="ml-2">{link.requirement?.type}</Badge>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeRequirementLink.mutate(link.id)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="testcases" className="space-y-4 pt-4">
-            <div className="flex gap-2">
-              <Select value={selectedTestCase} onValueChange={setSelectedTestCase}>
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Selecione um caso de teste para vincular..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableTestCases.map((tc) => (
-                    <SelectItem key={tc.id} value={tc.id}>
-                      {tc.code} - {tc.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button onClick={handleAddTestCase} disabled={!selectedTestCase}>
-                <Plus className="h-4 w-4 mr-1" />
-                Vincular
-              </Button>
-            </div>
-
-            <div className="space-y-2">
-              {testCaseLinks.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-                  <TestTube2 className="h-8 w-8 mb-2" />
-                  <p>Nenhum caso de teste vinculado a este risco</p>
-                </div>
-              ) : (
-                testCaseLinks.map((link: any) => (
-                  <Card key={link.id}>
-                    <CardContent className="flex items-center justify-between p-3">
-                      <div>
-                        <Badge variant="outline" className="mr-2">{link.test_case?.code}</Badge>
-                        <span className="font-medium">{link.test_case?.title}</span>
-                        <Badge 
-                          variant={link.test_case?.status === "passed" ? "default" : "secondary"} 
-                          className="ml-2"
+              <div className="space-y-2">
+                {requirementLinks.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                    <FileText className="h-8 w-8 mb-2" />
+                    <p>Nenhum requisito vinculado a este risco</p>
+                  </div>
+                ) : (
+                  requirementLinks.map((link: any) => (
+                    <Card key={link.id}>
+                      <CardContent className="flex items-center justify-between p-3">
+                        <div>
+                          <Badge variant="outline" className="mr-2">{link.requirement?.code}</Badge>
+                          <span className="font-medium">{link.requirement?.title}</span>
+                          <Badge variant="secondary" className="ml-2">{link.requirement?.type}</Badge>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeRequirementLink.mutate(link.id)}
                         >
-                          {link.test_case?.status || "Pendente"}
-                        </Badge>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeTestCaseLink.mutate(link.id)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </div>
-          </TabsContent>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </div>
+            </TabsContent>
+          )}
+
+          {!isIRA && (
+            <TabsContent value="testcases" className="space-y-4 pt-4">
+              <div className="flex gap-2">
+                <Select value={selectedTestCase} onValueChange={setSelectedTestCase}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Selecione um caso de teste para vincular..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableTestCases.map((tc) => (
+                      <SelectItem key={tc.id} value={tc.id}>
+                        {tc.code} - {tc.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button onClick={handleAddTestCase} disabled={!selectedTestCase}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Vincular
+                </Button>
+              </div>
+
+              <div className="space-y-2">
+                {testCaseLinks.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                    <TestTube2 className="h-8 w-8 mb-2" />
+                    <p>Nenhum caso de teste vinculado a este risco</p>
+                  </div>
+                ) : (
+                  testCaseLinks.map((link: any) => (
+                    <Card key={link.id}>
+                      <CardContent className="flex items-center justify-between p-3">
+                        <div>
+                          <Badge variant="outline" className="mr-2">{link.test_case?.code}</Badge>
+                          <span className="font-medium">{link.test_case?.title}</span>
+                          <Badge 
+                            variant={link.test_case?.status === "passed" ? "default" : "secondary"} 
+                            className="ml-2"
+                          >
+                            {link.test_case?.status || "Pendente"}
+                          </Badge>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeTestCaseLink.mutate(link.id)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </div>
+            </TabsContent>
+          )}
 
           <TabsContent value="mitigation" className="pt-4">
             <MitigationActionsTab riskId={risk.id} />
           </TabsContent>
 
-          <TabsContent value="traceability" className="pt-4">
-            <RiskTraceabilityTab riskId={risk.id} riskLevel={risk.risk_level || "low"} />
-          </TabsContent>
+          {!isIRA && (
+            <TabsContent value="traceability" className="pt-4">
+              <RiskTraceabilityTab riskId={risk.id} riskLevel={risk.risk_level || "low"} />
+            </TabsContent>
+          )}
 
-          <TabsContent value="matrix" className="pt-4">
-            <div className="flex flex-col items-center gap-6">
-              <Card className="p-6">
-                <CardHeader className="p-0 pb-4">
-                  <CardTitle className="text-center text-lg">Matriz de Risco</CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <RiskMatrix
-                    probability={risk.probability || 5}
-                    severity={risk.severity || 5}
-                  />
-                </CardContent>
-              </Card>
-              <div className="flex gap-4 text-sm">
-                <div className="flex items-center gap-2">
-                  <div className="h-4 w-4 rounded bg-risk-low/20" />
-                  <span>Baixo</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="h-4 w-4 rounded bg-risk-medium/20" />
-                  <span>Médio</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="h-4 w-4 rounded bg-risk-high/20" />
-                  <span>Alto</span>
+          {!isIRA && (
+            <TabsContent value="matrix" className="pt-4">
+              <div className="flex flex-col items-center gap-6">
+                <Card className="p-6">
+                  <CardHeader className="p-0 pb-4">
+                    <CardTitle className="text-center text-lg">Matriz de Risco</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <RiskMatrix
+                      probability={risk.probability || 5}
+                      severity={risk.severity || 5}
+                    />
+                  </CardContent>
+                </Card>
+                <div className="flex gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 w-4 rounded bg-risk-low/20" />
+                    <span>Baixo</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 w-4 rounded bg-risk-medium/20" />
+                    <span>Médio</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 w-4 rounded bg-risk-high/20" />
+                    <span>Alto</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          </TabsContent>
+            </TabsContent>
+          )}
         </Tabs>
 
         <DialogFooter>
