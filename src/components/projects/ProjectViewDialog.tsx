@@ -20,8 +20,12 @@ import {
   Send, 
   Clock, 
   AlertTriangle,
-  Trophy
+  Trophy,
+  FileDown,
+  Loader2
 } from "lucide-react";
+import { toast } from "sonner";
+import { exportProjectToPDF } from "@/lib/pdfExport";
 import type { Database } from "@/integrations/supabase/types";
 
 type ValidationProject = Database["public"]["Tables"]["validation_projects"]["Row"] & {
@@ -89,6 +93,7 @@ export function ProjectViewDialog({
 }: ProjectViewDialogProps) {
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [isExporting, setIsExporting] = useState(false);
 
   if (!project) return null;
 
@@ -101,6 +106,19 @@ export function ProjectViewDialog({
       onReject(project.id, rejectionReason);
       setShowRejectForm(false);
       setRejectionReason("");
+    }
+  };
+
+  const handleExportPDF = () => {
+    setIsExporting(true);
+    try {
+      exportProjectToPDF(project);
+      toast.success("PDF exportado com sucesso!");
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error("Erro ao exportar PDF");
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -265,6 +283,18 @@ export function ProjectViewDialog({
         </div>
 
         <DialogFooter className="flex-wrap gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleExportPDF}
+            disabled={isExporting}
+          >
+            {isExporting ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <FileDown className="mr-2 h-4 w-4" />
+            )}
+            Exportar PDF
+          </Button>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Fechar
           </Button>
