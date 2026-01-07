@@ -415,6 +415,70 @@ export type Database = {
           },
         ]
       }
+      mitigation_actions: {
+        Row: {
+          company_id: string
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          responsible_id: string | null
+          risk_id: string
+          status: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          responsible_id?: string | null
+          risk_id: string
+          status?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          responsible_id?: string | null
+          risk_id?: string
+          status?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mitigation_actions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mitigation_actions_responsible_id_fkey"
+            columns: ["responsible_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mitigation_actions_risk_id_fkey"
+            columns: ["risk_id"]
+            isOneToOne: false
+            referencedRelation: "risk_assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permissions_matrix: {
         Row: {
           admin_access: boolean | null
@@ -744,6 +808,7 @@ export type Database = {
           severity: number | null
           status: Database["public"]["Enums"]["status_type"] | null
           system_id: string | null
+          tags: string[] | null
           title: string
           updated_at: string
         }
@@ -766,6 +831,7 @@ export type Database = {
           severity?: number | null
           status?: Database["public"]["Enums"]["status_type"] | null
           system_id?: string | null
+          tags?: string[] | null
           title: string
           updated_at?: string
         }
@@ -788,6 +854,7 @@ export type Database = {
           severity?: number | null
           status?: Database["public"]["Enums"]["status_type"] | null
           system_id?: string | null
+          tags?: string[] | null
           title?: string
           updated_at?: string
         }
@@ -1179,6 +1246,64 @@ export type Database = {
             columns: ["system_id"]
             isOneToOne: false
             referencedRelation: "systems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      test_evidence: {
+        Row: {
+          company_id: string
+          created_at: string
+          description: string | null
+          evidence_type: string | null
+          file_url: string | null
+          id: string
+          test_case_id: string
+          title: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          description?: string | null
+          evidence_type?: string | null
+          file_url?: string | null
+          id?: string
+          test_case_id: string
+          title: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          evidence_type?: string | null
+          file_url?: string | null
+          id?: string
+          test_case_id?: string
+          title?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_evidence_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "test_evidence_test_case_id_fkey"
+            columns: ["test_case_id"]
+            isOneToOne: false
+            referencedRelation: "test_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "test_evidence_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]

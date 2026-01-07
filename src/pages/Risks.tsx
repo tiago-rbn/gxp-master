@@ -61,6 +61,7 @@ export default function Risks() {
   const [searchTerm, setSearchTerm] = useState("");
   const [levelFilter, setLevelFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [tagFilter, setTagFilter] = useState<string>("all");
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
@@ -76,13 +77,19 @@ export default function Risks() {
     deleteRiskAssessment,
   } = useRiskAssessments();
 
+  // Extract all unique tags from risks
+  const allTags = Array.from(
+    new Set(riskAssessments.flatMap((r: any) => r.tags || []))
+  ).sort();
+
   const filteredRisks = riskAssessments.filter((risk) => {
     const matchesSearch =
       risk.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (risk.system?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
     const matchesLevel = levelFilter === "all" || risk.risk_level === levelFilter;
     const matchesType = typeFilter === "all" || risk.assessment_type === typeFilter;
-    return matchesSearch && matchesLevel && matchesType;
+    const matchesTag = tagFilter === "all" || ((risk as any).tags || []).includes(tagFilter);
+    return matchesSearch && matchesLevel && matchesType && matchesTag;
   });
 
   const handleCreate = () => {
@@ -113,6 +120,7 @@ export default function Risks() {
       assessor_id: values.assessor_id || null,
       approver_id: values.approver_id || null,
       reviewer_id: values.reviewer_id || null,
+      tags: values.tags || [],
     };
 
     if (selectedRisk) {
@@ -226,6 +234,29 @@ export default function Risks() {
                 <SelectTrigger className="w-[140px]">
                   <SelectValue placeholder="Nível" />
                 </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos Níveis</SelectItem>
+                  <SelectItem value="critical">Crítico</SelectItem>
+                  <SelectItem value="high">Alto</SelectItem>
+                  <SelectItem value="medium">Médio</SelectItem>
+                  <SelectItem value="low">Baixo</SelectItem>
+                </SelectContent>
+              </Select>
+              {allTags.length > 0 && (
+                <Select value={tagFilter} onValueChange={setTagFilter}>
+                  <SelectTrigger className="w-[160px]">
+                    <SelectValue placeholder="Tag" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas Tags</SelectItem>
+                    {allTags.map((tag) => (
+                      <SelectItem key={tag} value={tag}>
+                        {tag}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
                 <SelectContent>
                   <SelectItem value="all">Todos Níveis</SelectItem>
                   <SelectItem value="critical">Crítico</SelectItem>

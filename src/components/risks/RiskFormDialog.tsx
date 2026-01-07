@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -31,9 +32,14 @@ import {
 } from "@/components/ui/select";
 import { useSystemsForSelect } from "@/hooks/useRiskAssessments";
 import { useProfiles } from "@/hooks/useSystems";
+import { useValidationProjects } from "@/hooks/useValidationProjects";
+import { useChangeRequests } from "@/hooks/useChangeRequests";
+import { X, Plus } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
-type RiskAssessment = Database["public"]["Tables"]["risk_assessments"]["Row"];
+type RiskAssessment = Database["public"]["Tables"]["risk_assessments"]["Row"] & {
+  tags?: string[];
+};
 
 const riskSchema = z.object({
   title: z.string().min(1, "Título é obrigatório"),
@@ -50,6 +56,7 @@ const riskSchema = z.object({
   assessor_id: z.string().optional(),
   approver_id: z.string().optional(),
   reviewer_id: z.string().optional(),
+  tags: z.array(z.string()).optional(),
 });
 
 type RiskFormValues = z.infer<typeof riskSchema>;
@@ -79,6 +86,11 @@ export function RiskFormDialog({
 }: RiskFormDialogProps) {
   const { data: systems = [] } = useSystemsForSelect();
   const { data: profiles = [] } = useProfiles();
+  const { projects } = useValidationProjects();
+  const { changeRequests } = useChangeRequests();
+  
+  const [tagInput, setTagInput] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
 
   const form = useForm<RiskFormValues>({
     resolver: zodResolver(riskSchema),
@@ -97,6 +109,7 @@ export function RiskFormDialog({
       assessor_id: "",
       approver_id: "",
       reviewer_id: "",
+      tags: [],
     },
   });
 
@@ -111,6 +124,8 @@ export function RiskFormDialog({
 
   useEffect(() => {
     if (risk) {
+      const riskTags = (risk as any).tags || [];
+      setTags(riskTags);
       form.reset({
         title: risk.title,
         description: risk.description || "",
@@ -126,8 +141,10 @@ export function RiskFormDialog({
         assessor_id: risk.assessor_id || "",
         approver_id: (risk as any).approver_id || "",
         reviewer_id: (risk as any).reviewer_id || "",
+        tags: riskTags,
       });
     } else {
+      setTags([]);
       form.reset({
         title: "",
         description: "",
@@ -143,12 +160,55 @@ export function RiskFormDialog({
         assessor_id: "",
         approver_id: "",
         reviewer_id: "",
+        tags: [],
       });
     }
   }, [risk, form]);
 
+  const handleAddTag = () => {
+    if (tagInput.trim() && !tags.includes(tagInput.trim())) {
+      const newTags = [...tags, tagInput.trim()];
+      setTags(newTags);
+      form.setValue("tags", newTags);
+      setTagInput("");
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    const newTags = tags.filter((t) => t !== tagToRemove);
+    setTags(newTags);
+    form.setValue("tags", newTags);
+  };
+
+  const handleAddSystemTag = (systemName: string) => {
+    const tag = `sistema:${systemName}`;
+    if (!tags.includes(tag)) {
+      const newTags = [...tags, tag];
+      setTags(newTags);
+      form.setValue("tags", newTags);
+    }
+  };
+
+  const handleAddProjectTag = (projectName: string) => {
+    const tag = `projeto:${projectName}`;
+    if (!tags.includes(tag)) {
+      const newTags = [...tags, tag];
+      setTags(newTags);
+      form.setValue("tags", newTags);
+    }
+  };
+
+  const handleAddChangeTag = (changeTitle: string) => {
+    const tag = `mudança:${changeTitle}`;
+    if (!tags.includes(tag)) {
+      const newTags = [...tags, tag];
+      setTags(newTags);
+      form.setValue("tags", newTags);
+    }
+  };
+
   const handleSubmit = (values: RiskFormValues) => {
-    onSubmit(values);
+    onSubmit({ ...values, tags });
   };
 
   const riskLevelLabels: Record<string, { label: string; className: string }> = {
@@ -477,6 +537,80 @@ export function RiskFormDialog({
                 </FormItem>
               )}
             />
+
+            {/* Tags Section */}
+            <div className="space-y-3 rounded-lg border p-4">
+              <h4 className="font-medium">Tags de Agrupamento</h4>
+              <p className="text-xs text-muted-foreground">
+                Use tags para agrupar riscos por sistema, projeto ou controle de mudança
+              </p>
+
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Digite uma tag e pressione Enter..."
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddTag();
+                    }
+                  }}
+                  className="flex-1"
+                />
+                <Button type="button" variant="outline" size="icon" onClick={handleAddTag}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {/* Quick Add Tags */}
+              <div className="flex flex-wrap gap-2">
+                {systems.slice(0, 3).map((system) => (
+                  <Button
+                    key={system.id}
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => handleAddSystemTag(system.name)}
+                    disabled={tags.includes(`sistema:${system.name}`)}
+                  >
+                    + {system.name}
+                  </Button>
+                ))}
+                {projects.slice(0, 3).map((project) => (
+                  <Button
+                    key={project.id}
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => handleAddProjectTag(project.name)}
+                    disabled={tags.includes(`projeto:${project.name}`)}
+                  >
+                    + {project.name}
+                  </Button>
+                ))}
+              </div>
+
+              {/* Current Tags */}
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-2">
+                  {tags.map((tag) => (
+                    <Badge key={tag} variant="secondary" className="gap-1">
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveTag(tag)}
+                        className="ml-1 rounded-full hover:bg-muted"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
