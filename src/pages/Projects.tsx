@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Search, MoreHorizontal, Eye, Edit, Trash2, Calendar, Loader2 } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Eye, Edit, Trash2, Calendar, Loader2, Send, CheckCircle, XCircle, Trophy } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +12,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -30,15 +31,25 @@ import type { Database } from "@/integrations/supabase/types";
 type ValidationProject = Database["public"]["Tables"]["validation_projects"]["Row"] & {
   system?: { name: string } | null;
   manager?: { full_name: string } | null;
+  approver?: { full_name: string } | null;
 };
 
 const statusLabels: Record<string, string> = {
-  draft: "Planejamento",
-  pending: "Em Andamento",
-  approved: "Revisão",
+  draft: "Rascunho",
+  pending: "Aguardando Aprovação",
+  approved: "Aprovado",
   rejected: "Rejeitado",
   completed: "Concluído",
-  cancelled: "Pausado",
+  cancelled: "Cancelado",
+};
+
+const statusVariants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  draft: "secondary",
+  pending: "outline",
+  approved: "default",
+  rejected: "destructive",
+  completed: "default",
+  cancelled: "secondary",
 };
 
 function getInitials(name: string): string {
@@ -65,8 +76,17 @@ export default function Projects() {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<ValidationProject | null>(null);
 
-  const { projects, isLoading, createProject, updateProject, deleteProject } =
-    useValidationProjects();
+  const { 
+    projects, 
+    isLoading, 
+    createProject, 
+    updateProject, 
+    deleteProject,
+    submitForApproval,
+    approveProject,
+    rejectProject,
+    completeProject 
+  } = useValidationProjects();
 
   const filteredProjects = projects.filter((project) => {
     const matchesSearch =
@@ -159,11 +179,11 @@ export default function Projects() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos Status</SelectItem>
-                <SelectItem value="draft">Planejamento</SelectItem>
-                <SelectItem value="pending">Em Andamento</SelectItem>
-                <SelectItem value="approved">Revisão</SelectItem>
+                <SelectItem value="draft">Rascunho</SelectItem>
+                <SelectItem value="pending">Aguardando Aprovação</SelectItem>
+                <SelectItem value="approved">Aprovado</SelectItem>
+                <SelectItem value="rejected">Rejeitado</SelectItem>
                 <SelectItem value="completed">Concluído</SelectItem>
-                <SelectItem value="cancelled">Pausado</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -214,10 +234,47 @@ export default function Projects() {
                         <Eye className="mr-2 h-4 w-4" />
                         Visualizar
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleEdit(project)}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Editar
-                      </DropdownMenuItem>
+                      {(project.status === "draft" || project.status === "rejected") && (
+                        <>
+                          <DropdownMenuItem onClick={() => handleEdit(project)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => submitForApproval.mutate(project.id)}>
+                            <Send className="mr-2 h-4 w-4" />
+                            Enviar para Aprovação
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                      {project.status === "pending" && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            onClick={() => approveProject.mutate(project.id)}
+                            className="text-green-600"
+                          >
+                            <CheckCircle className="mr-2 h-4 w-4" />
+                            Aprovar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => {
+                              setSelectedProject(project);
+                              setIsViewOpen(true);
+                            }}
+                            className="text-destructive"
+                          >
+                            <XCircle className="mr-2 h-4 w-4" />
+                            Rejeitar
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                      {project.status === "approved" && (
+                        <DropdownMenuItem onClick={() => completeProject.mutate(project.id)}>
+                          <Trophy className="mr-2 h-4 w-4" />
+                          Marcar Concluído
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuSeparator />
                       <DropdownMenuItem
                         className="text-destructive"
                         onClick={() => handleDelete(project)}
@@ -231,7 +288,7 @@ export default function Projects() {
               </CardHeader>
               <CardContent className="flex-1">
                 <div className="space-y-4">
-                  <Badge variant="outline">
+                  <Badge variant={statusVariants[project.status || "draft"]}>
                     {statusLabels[project.status || "draft"]}
                   </Badge>
                   <div className="space-y-2">
@@ -291,6 +348,11 @@ export default function Projects() {
         onOpenChange={setIsViewOpen}
         project={selectedProject}
         onEdit={() => selectedProject && handleEdit(selectedProject)}
+        onSubmitForApproval={(id) => submitForApproval.mutate(id)}
+        onApprove={(id) => approveProject.mutate(id)}
+        onReject={(id, reason) => rejectProject.mutate({ id, reason })}
+        onComplete={(id) => completeProject.mutate(id)}
+        isSubmitting={submitForApproval.isPending || approveProject.isPending || rejectProject.isPending || completeProject.isPending}
       />
 
       <DeleteProjectDialog
