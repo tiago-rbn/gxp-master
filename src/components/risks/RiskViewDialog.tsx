@@ -17,7 +17,9 @@ import { useRiskRequirementLinks, useRiskTestCaseLinks } from "@/hooks/useRiskLi
 import { useRequirements } from "@/hooks/useRequirements";
 import { useTestCases } from "@/hooks/useTestCases";
 import { useUserCompanies } from "@/hooks/useUserCompanies";
-import { Plus, X, FileText, TestTube2 } from "lucide-react";
+import { RiskTraceabilityTab } from "./RiskTraceabilityTab";
+import { MitigationActionsTab } from "./MitigationActionsTab";
+import { Plus, X, FileText, TestTube2, Tag } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -32,6 +34,7 @@ type RiskAssessment = Database["public"]["Tables"]["risk_assessments"]["Row"] & 
   assessor?: { full_name: string } | null;
   approver?: { full_name: string } | null;
   reviewer?: { full_name: string } | null;
+  tags?: string[];
 };
 
 interface RiskViewDialogProps {
@@ -159,11 +162,13 @@ export function RiskViewDialog({
         </DialogHeader>
 
         <Tabs defaultValue="details" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="details">Detalhes</TabsTrigger>
             <TabsTrigger value="team">Responsáveis</TabsTrigger>
             <TabsTrigger value="requirements">Requisitos</TabsTrigger>
-            <TabsTrigger value="testcases">Casos de Teste</TabsTrigger>
+            <TabsTrigger value="testcases">Testes</TabsTrigger>
+            <TabsTrigger value="mitigation">Mitigação</TabsTrigger>
+            <TabsTrigger value="traceability">Rastreabilidade</TabsTrigger>
             <TabsTrigger value="matrix">Matriz</TabsTrigger>
           </TabsList>
 
@@ -219,6 +224,21 @@ export function RiskViewDialog({
                 </div>
               </div>
             </div>
+
+            {/* Tags */}
+            {(risk as any).tags && (risk as any).tags.length > 0 && (
+              <div className="pt-4">
+                <Label className="text-muted-foreground flex items-center gap-1">
+                  <Tag className="h-3 w-3" />
+                  Tags
+                </Label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {(risk as any).tags.map((tag: string) => (
+                    <Badge key={tag} variant="secondary">{tag}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {risk.description && (
               <div className="pt-4">
@@ -377,6 +397,14 @@ export function RiskViewDialog({
                 ))
               )}
             </div>
+          </TabsContent>
+
+          <TabsContent value="mitigation" className="pt-4">
+            <MitigationActionsTab riskId={risk.id} />
+          </TabsContent>
+
+          <TabsContent value="traceability" className="pt-4">
+            <RiskTraceabilityTab riskId={risk.id} riskLevel={risk.risk_level || "low"} />
           </TabsContent>
 
           <TabsContent value="matrix" className="pt-4">
