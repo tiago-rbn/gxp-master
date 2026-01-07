@@ -16,6 +16,8 @@ import Settings from "./pages/Settings";
 import Companies from "./pages/Companies";
 import AcceptInvite from "./pages/AcceptInvite";
 import NotFound from "./pages/NotFound";
+import RTM from "./pages/RTM";
+import AuditTrail from "./pages/AuditTrail";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +38,8 @@ const App = () => (
             <Route path="/projects" element={<ProtectedRoute><Projects /></ProtectedRoute>} />
             <Route path="/documents" element={<ProtectedRoute><Documents /></ProtectedRoute>} />
             <Route path="/changes" element={<ProtectedRoute><Changes /></ProtectedRoute>} />
+            <Route path="/rtm" element={<ProtectedRoute><RTM /></ProtectedRoute>} />
+            <Route path="/audit-trail" element={<ProtectedRoute><AuditTrail /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/companies" element={<ProtectedRoute><Companies /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

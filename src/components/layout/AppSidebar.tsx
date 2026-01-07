@@ -10,6 +10,8 @@ import {
   Shield,
   ChevronLeft,
   Building2,
+  Link2,
+  History,
 } from "lucide-react";
 import {
   Sidebar,
@@ -37,6 +39,8 @@ const mainMenuItems = [
   { title: "Projetos de Validação", url: "/projects", icon: FolderKanban },
   { title: "Documentação", url: "/documents", icon: FileText },
   { title: "Gerenciamento de Mudanças", url: "/changes", icon: GitPullRequest },
+  { title: "Matriz de Rastreabilidade", url: "/rtm", icon: Link2 },
+  { title: "Trilha de Auditoria", url: "/audit-trail", icon: History },
 ];
 
 const configMenuItems = [
