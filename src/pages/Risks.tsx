@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, Trash2, AlertTriangle, Loader2 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -58,6 +59,7 @@ const riskLevelToOldFormat: Record<string, "High" | "Medium" | "Low"> = {
 };
 
 export default function Risks() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState("");
   const [levelFilter, setLevelFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -67,6 +69,8 @@ export default function Risks() {
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedRisk, setSelectedRisk] = useState<RiskAssessment | null>(null);
+  const [prefilledSystemId, setPrefilledSystemId] = useState<string | null>(null);
+  const [prefilledSystemName, setPrefilledSystemName] = useState<string | null>(null);
 
   const {
     riskAssessments,
@@ -76,6 +80,33 @@ export default function Risks() {
     updateRiskAssessment,
     deleteRiskAssessment,
   } = useRiskAssessments();
+
+  // Handle URL parameters for creating IRA or viewing a specific risk
+  useEffect(() => {
+    const createIRA = searchParams.get("createIRA");
+    const systemId = searchParams.get("systemId");
+    const systemName = searchParams.get("systemName");
+    const viewIRA = searchParams.get("viewIRA");
+
+    if (createIRA === "true" && systemId) {
+      setPrefilledSystemId(systemId);
+      setPrefilledSystemName(systemName);
+      setSelectedRisk(null);
+      setIsFormOpen(true);
+      // Clear the URL params
+      setSearchParams({});
+    }
+
+    if (viewIRA && riskAssessments.length > 0) {
+      const riskToView = riskAssessments.find(r => r.id === viewIRA);
+      if (riskToView) {
+        setSelectedRisk(riskToView);
+        setIsViewOpen(true);
+        // Clear the URL params
+        setSearchParams({});
+      }
+    }
+  }, [searchParams, riskAssessments, setSearchParams]);
 
   // Extract all unique tags from risks
   const allTags = Array.from(
@@ -93,8 +124,16 @@ export default function Risks() {
   });
 
   const handleCreate = () => {
+    setPrefilledSystemId(null);
+    setPrefilledSystemName(null);
     setSelectedRisk(null);
     setIsFormOpen(true);
+  };
+
+  const handleFormClose = () => {
+    setIsFormOpen(false);
+    setPrefilledSystemId(null);
+    setPrefilledSystemName(null);
   };
 
   const handleView = (risk: RiskAssessment) => {
@@ -378,10 +417,12 @@ export default function Risks() {
       {/* Dialogs */}
       <RiskFormDialog
         open={isFormOpen}
-        onOpenChange={setIsFormOpen}
+        onOpenChange={handleFormClose}
         risk={selectedRisk}
         onSubmit={handleFormSubmit}
         isLoading={createRiskAssessment.isPending || updateRiskAssessment.isPending}
+        prefilledSystemId={prefilledSystemId}
+        prefilledSystemName={prefilledSystemName}
       />
 
       <RiskViewDialog
