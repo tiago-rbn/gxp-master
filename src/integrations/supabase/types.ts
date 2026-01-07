@@ -1065,6 +1065,38 @@ export type Database = {
           },
         ]
       }
+      user_companies: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          is_primary: boolean
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_companies_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1177,6 +1209,10 @@ export type Database = {
         Args: { _token: string; _user_id: string }
         Returns: boolean
       }
+      add_user_to_company: {
+        Args: { _company_id: string; _set_primary?: boolean; _user_id: string }
+        Returns: boolean
+      }
       get_invitation_by_token: {
         Args: { _token: string }
         Returns: {
@@ -1189,6 +1225,11 @@ export type Database = {
           status: string
         }[]
       }
+      get_user_active_company_id: {
+        Args: { _user_id: string }
+        Returns: string
+      }
+      get_user_companies: { Args: { _user_id: string }; Returns: string[] }
       get_user_company_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
@@ -1209,6 +1250,14 @@ export type Database = {
       populate_default_templates: {
         Args: { _company_id: string }
         Returns: undefined
+      }
+      remove_user_from_company: {
+        Args: { _company_id: string; _user_id: string }
+        Returns: boolean
+      }
+      switch_user_company: {
+        Args: { _company_id: string; _user_id: string }
+        Returns: boolean
       }
     }
     Enums: {

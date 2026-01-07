@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Building2, Users, Shield, FileText, Settings as SettingsIcon, Plus, Edit, Trash2, MoreHorizontal, Loader2, Mail, RefreshCw, XCircle, Clock, Tags, Package } from "lucide-react";
+import { Building2, Users, Shield, FileText, Settings as SettingsIcon, Plus, Edit, Trash2, MoreHorizontal, Loader2, Mail, RefreshCw, XCircle, Clock, Tags, Package, UserPlus } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge, StatusType } from "@/components/shared/StatusBadge";
@@ -22,6 +22,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Slider } from "@/components/ui/slider";
@@ -40,11 +41,14 @@ import { InviteUserDialog } from "@/components/settings/InviteUserDialog";
 import { DocumentTypeFormDialog } from "@/components/settings/DocumentTypeFormDialog";
 import { DeleteDocumentTypeDialog } from "@/components/settings/DeleteDocumentTypeDialog";
 import { ProjectTemplatesTab } from "@/components/settings/ProjectTemplatesTab";
+import { CreateUserDialog } from "@/components/settings/CreateUserDialog";
+import { ManageUserCompaniesDialog } from "@/components/settings/ManageUserCompaniesDialog";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Lock } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 function getInitials(name: string): string {
   return name
@@ -102,6 +106,9 @@ export default function Settings() {
   // Dialog states
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
   const [userDialogOpen, setUserDialogOpen] = useState(false);
+  const [createUserDialogOpen, setCreateUserDialogOpen] = useState(false);
+  const [manageCompaniesDialogOpen, setManageCompaniesDialogOpen] = useState(false);
+  const [userForCompanies, setUserForCompanies] = useState<Profile | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<DocumentTemplate | null>(null);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
   const [deleteTemplateDialogOpen, setDeleteTemplateDialogOpen] = useState(false);
@@ -111,6 +118,8 @@ export default function Settings() {
   const [selectedDocumentType, setSelectedDocumentType] = useState<DocumentType | null>(null);
   const [deleteDocumentTypeDialogOpen, setDeleteDocumentTypeDialogOpen] = useState(false);
   const [documentTypeToDelete, setDocumentTypeToDelete] = useState<DocumentType | null>(null);
+  
+  const queryClient = useQueryClient();
 
   // Load company data into form
   useEffect(() => {
@@ -390,10 +399,16 @@ export default function Settings() {
                 <CardTitle>Usuários</CardTitle>
                 <CardDescription>Gerencie os usuários do sistema</CardDescription>
               </div>
-              <Button onClick={() => setInviteDialogOpen(true)}>
-                <Mail className="mr-2 h-4 w-4" />
-                Convidar Usuário
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setInviteDialogOpen(true)}>
+                  <Mail className="mr-2 h-4 w-4" />
+                  Convidar
+                </Button>
+                <Button onClick={() => setCreateUserDialogOpen(true)}>
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Novo Usuário
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {profilesLoading ? (
@@ -481,6 +496,16 @@ export default function Settings() {
                                 <Edit className="mr-2 h-4 w-4" />
                                 Editar
                               </DropdownMenuItem>
+                              {isSuperAdmin && (
+                                <DropdownMenuItem onClick={() => {
+                                  setUserForCompanies(profile);
+                                  setManageCompaniesDialogOpen(true);
+                                }}>
+                                  <Building2 className="mr-2 h-4 w-4" />
+                                  Gerenciar Empresas
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 className={profile.is_active ? "text-destructive" : "text-success"}
                                 onClick={() => handleToggleUserStatus(profile)}
@@ -982,6 +1007,23 @@ export default function Settings() {
         typeName={documentTypeToDelete?.name || ""}
         onConfirm={handleDeleteDocumentTypeConfirm}
         isDeleting={deleteDocumentType.isPending}
+      />
+
+      {/* Create User Dialog */}
+      {company && (
+        <CreateUserDialog
+          open={createUserDialogOpen}
+          onOpenChange={setCreateUserDialogOpen}
+          companyId={company.id}
+          onSuccess={() => queryClient.invalidateQueries({ queryKey: ["profiles"] })}
+        />
+      )}
+
+      {/* Manage User Companies Dialog */}
+      <ManageUserCompaniesDialog
+        open={manageCompaniesDialogOpen}
+        onOpenChange={setManageCompaniesDialogOpen}
+        user={userForCompanies}
       />
     </AppLayout>
   );

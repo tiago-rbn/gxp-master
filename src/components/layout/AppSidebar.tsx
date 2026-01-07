@@ -31,6 +31,7 @@ import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { CompanySwitcher } from "./CompanySwitcher";
 
 const mainMenuItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -85,6 +86,11 @@ export function AppSidebar() {
             </div>
           )}
         </div>
+        {!isCollapsed && (
+          <div className="mt-3">
+            <CompanySwitcher />
+          </div>
+        )}
       </SidebarHeader>
 
       <SidebarContent className="scrollbar-thin">
