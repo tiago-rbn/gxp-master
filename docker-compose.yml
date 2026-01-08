@@ -1,0 +1,7 @@
+services:
+  gxp:
+    build: .
+    image: gxp-prod
+    ports:
+      - "8090:80"
+    restart: unless-stopped
