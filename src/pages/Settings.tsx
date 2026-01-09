@@ -41,6 +41,7 @@ import { InviteUserDialog } from "@/components/settings/InviteUserDialog";
 import { DocumentTypeFormDialog } from "@/components/settings/DocumentTypeFormDialog";
 import { DeleteDocumentTypeDialog } from "@/components/settings/DeleteDocumentTypeDialog";
 import { ProjectTemplatesTab } from "@/components/settings/ProjectTemplatesTab";
+import { DocumentTemplatesTab } from "@/components/templates/DocumentTemplatesTab";
 import { CreateUserDialog } from "@/components/settings/CreateUserDialog";
 import { ManageUserCompaniesDialog } from "@/components/settings/ManageUserCompaniesDialog";
 import { toast } from "sonner";
@@ -700,11 +701,15 @@ export default function Settings() {
 
         {/* Documents Tab with Sub-tabs */}
         <TabsContent value="documents">
-          <Tabs defaultValue="templates" className="space-y-4">
+          <Tabs defaultValue="doc-templates" className="space-y-4">
             <TabsList>
-              <TabsTrigger value="templates" className="gap-2">
+              <TabsTrigger value="doc-templates" className="gap-2">
                 <FileText className="h-4 w-4" />
                 Templates de Documentos
+              </TabsTrigger>
+              <TabsTrigger value="legacy-templates" className="gap-2">
+                <FileText className="h-4 w-4" />
+                Templates Antigos
               </TabsTrigger>
               <TabsTrigger value="types" className="gap-2">
                 <Tags className="h-4 w-4" />
@@ -712,8 +717,13 @@ export default function Settings() {
               </TabsTrigger>
             </TabsList>
 
-            {/* Templates Sub-tab */}
-            <TabsContent value="templates">
+            {/* New Document Templates */}
+            <TabsContent value="doc-templates">
+              <DocumentTemplatesTab />
+            </TabsContent>
+
+            {/* Legacy Templates Sub-tab */}
+            <TabsContent value="legacy-templates">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
