@@ -259,8 +259,8 @@ export function DocumentTemplateFormDialog({
                       <FormItem>
                         <FormLabel>Categoria GAMP</FormLabel>
                         <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
+                          onValueChange={(value) => field.onChange(value === "__all__" ? null : value)}
+                          value={field.value || "__all__"}
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -268,7 +268,7 @@ export function DocumentTemplateFormDialog({
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">Todas as categorias</SelectItem>
+                            <SelectItem value="__all__">Todas as categorias</SelectItem>
                             {gampCategories.map((cat) => (
                               <SelectItem key={cat.value} value={cat.value}>
                                 {cat.label}
@@ -288,8 +288,8 @@ export function DocumentTemplateFormDialog({
                       <FormItem>
                         <FormLabel>Sistema Específico</FormLabel>
                         <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
+                          onValueChange={(value) => field.onChange(value === "__all__" ? null : value)}
+                          value={field.value || "__all__"}
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -297,7 +297,7 @@ export function DocumentTemplateFormDialog({
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">Todos os sistemas</SelectItem>
+                            <SelectItem value="__all__">Todos os sistemas</SelectItem>
                             {(systems || []).map((sys) => (
                               <SelectItem key={sys.id} value={sys.name}>
                                 {sys.name}

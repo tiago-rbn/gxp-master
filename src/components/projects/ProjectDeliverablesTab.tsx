@@ -362,12 +362,15 @@ export function ProjectDeliverablesTab({ projectId, gampCategory }: ProjectDeliv
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Documento</Label>
-              <Select value={selectedDocumentId} onValueChange={setSelectedDocumentId}>
+              <Select 
+                value={selectedDocumentId || "__none__"} 
+                onValueChange={(value) => setSelectedDocumentId(value === "__none__" ? "" : value)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione um documento" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhum documento</SelectItem>
+                  <SelectItem value="__none__">Nenhum documento</SelectItem>
                   {documents
                     .filter(doc => !selectedDeliverable?.document_type || doc.document_type === selectedDeliverable.document_type)
                     .map((doc) => (
