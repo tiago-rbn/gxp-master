@@ -1260,6 +1260,176 @@ export type Database = {
           },
         ]
       }
+      template_package_activations: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          company_id: string
+          id: string
+          notes: string | null
+          package_id: string
+          requested_at: string
+          requested_by: string | null
+          status: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          company_id: string
+          id?: string
+          notes?: string | null
+          package_id: string
+          requested_at?: string
+          requested_by?: string | null
+          status?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          company_id?: string
+          id?: string
+          notes?: string | null
+          package_id?: string
+          requested_at?: string
+          requested_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_package_activations_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_package_activations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_package_activations_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "template_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_package_activations_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      template_package_items: {
+        Row: {
+          created_at: string
+          id: string
+          package_id: string
+          sort_order: number | null
+          template_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          package_id: string
+          sort_order?: number | null
+          template_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          package_id?: string
+          sort_order?: number | null
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_package_items_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "template_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_package_items_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "document_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      template_packages: {
+        Row: {
+          application: string
+          company_id: string
+          cover_image_url: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          document_count: number
+          gamp_category: string | null
+          id: string
+          is_published: boolean
+          name: string
+          price: number
+          system_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          application: string
+          company_id: string
+          cover_image_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          document_count?: number
+          gamp_category?: string | null
+          id?: string
+          is_published?: boolean
+          name: string
+          price?: number
+          system_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          application?: string
+          company_id?: string
+          cover_image_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          document_count?: number
+          gamp_category?: string | null
+          id?: string
+          is_published?: boolean
+          name?: string
+          price?: number
+          system_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_packages_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_packages_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       template_versions: {
         Row: {
           change_summary: string | null
