@@ -224,6 +224,88 @@ export type Database = {
           },
         ]
       }
+      document_templates: {
+        Row: {
+          company_id: string
+          conditional_blocks: Json | null
+          content: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          document_type: string
+          gamp_category: string | null
+          id: string
+          is_active: boolean | null
+          is_default: boolean | null
+          name: string
+          parent_template_id: string | null
+          placeholders: Json | null
+          system_name: string | null
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          company_id: string
+          conditional_blocks?: Json | null
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          document_type: string
+          gamp_category?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name: string
+          parent_template_id?: string | null
+          placeholders?: Json | null
+          system_name?: string | null
+          updated_at?: string
+          version?: string
+        }
+        Update: {
+          company_id?: string
+          conditional_blocks?: Json | null
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          document_type?: string
+          gamp_category?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name?: string
+          parent_template_id?: string | null
+          placeholders?: Json | null
+          system_name?: string | null
+          updated_at?: string
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_templates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_templates_parent_template_id_fkey"
+            columns: ["parent_template_id"]
+            isOneToOne: false
+            referencedRelation: "document_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_versions: {
         Row: {
           change_summary: string | null
@@ -1178,6 +1260,61 @@ export type Database = {
           },
         ]
       }
+      template_versions: {
+        Row: {
+          change_summary: string | null
+          company_id: string
+          content: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          template_id: string
+          version: string
+        }
+        Insert: {
+          change_summary?: string | null
+          company_id: string
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          template_id: string
+          version: string
+        }
+        Update: {
+          change_summary?: string | null
+          company_id?: string
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          template_id?: string
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_versions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_versions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_versions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "document_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       test_cases: {
         Row: {
           code: string
@@ -1483,6 +1620,10 @@ export type Database = {
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       populate_default_deliverable_templates: {
+        Args: { _company_id: string }
+        Returns: undefined
+      }
+      populate_default_document_templates: {
         Args: { _company_id: string }
         Returns: undefined
       }
