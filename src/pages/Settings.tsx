@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Building2, Users, Shield, FileText, Settings as SettingsIcon, Plus, Edit, Trash2, MoreHorizontal, Loader2, Mail, RefreshCw, XCircle, Clock, Tags, Package, UserPlus } from "lucide-react";
+import { Building2, Users, Shield, FileText, Settings as SettingsIcon, Plus, Edit, Trash2, MoreHorizontal, Loader2, Mail, RefreshCw, XCircle, Clock, Tags, Package, UserPlus, ShoppingCart } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge, StatusType } from "@/components/shared/StatusBadge";
@@ -42,6 +42,7 @@ import { DocumentTypeFormDialog } from "@/components/settings/DocumentTypeFormDi
 import { DeleteDocumentTypeDialog } from "@/components/settings/DeleteDocumentTypeDialog";
 import { ProjectTemplatesTab } from "@/components/settings/ProjectTemplatesTab";
 import { DocumentTemplatesTab } from "@/components/templates/DocumentTemplatesTab";
+import { TemplatePackagesTab } from "@/components/templates/TemplatePackagesTab";
 import { CreateUserDialog } from "@/components/settings/CreateUserDialog";
 import { ManageUserCompaniesDialog } from "@/components/settings/ManageUserCompaniesDialog";
 import { toast } from "sonner";
@@ -314,7 +315,7 @@ export default function Settings() {
       />
 
       <Tabs defaultValue="company" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:grid-cols-6">
+        <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:grid-cols-7">
           <TabsTrigger value="company" className="gap-2">
             <Building2 className="h-4 w-4" />
             <span className="hidden sm:inline">Empresa</span>
@@ -334,6 +335,10 @@ export default function Settings() {
           <TabsTrigger value="project-templates" className="gap-2">
             <Package className="h-4 w-4" />
             <span className="hidden sm:inline">Projetos</span>
+          </TabsTrigger>
+          <TabsTrigger value="template-packages" className="gap-2">
+            <ShoppingCart className="h-4 w-4" />
+            <span className="hidden sm:inline">Pacotes</span>
           </TabsTrigger>
           <TabsTrigger value="parameters" className="gap-2">
             <SettingsIcon className="h-4 w-4" />
@@ -865,6 +870,11 @@ export default function Settings() {
         {/* Project Templates Tab */}
         <TabsContent value="project-templates">
           <ProjectTemplatesTab />
+        </TabsContent>
+
+        {/* Template Packages Tab */}
+        <TabsContent value="template-packages">
+          <TemplatePackagesTab />
         </TabsContent>
 
         {/* Parameters Tab */}
