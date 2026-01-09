@@ -27,7 +27,11 @@ import { EmptyState } from "@/components/shared/EmptyState";
 export function TemplatePackageActivationsTab() {
   const { user } = useAuth();
   const { activations, isLoading, updateActivation, isSuperAdmin } = usePackageActivations();
-  const [selectedActivation, setSelectedActivation] = useState<string | null>(null);
+  const [selectedActivation, setSelectedActivation] = useState<{
+    id: string;
+    packageId: string;
+    companyId: string;
+  } | null>(null);
   const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
   const [notes, setNotes] = useState("");
 
@@ -38,10 +42,12 @@ export function TemplatePackageActivationsTab() {
     if (!selectedActivation || !actionType || !user) return;
 
     await updateActivation.mutateAsync({
-      id: selectedActivation,
+      id: selectedActivation.id,
       status: actionType === "approve" ? "approved" : "rejected",
       approvedBy: user.id,
       notes: notes || undefined,
+      packageId: selectedActivation.packageId,
+      targetCompanyId: selectedActivation.companyId,
     });
 
     setSelectedActivation(null);
@@ -128,7 +134,11 @@ export function TemplatePackageActivationsTab() {
                           size="sm"
                           variant="default"
                           onClick={() => {
-                            setSelectedActivation(activation.id);
+                            setSelectedActivation({
+                              id: activation.id,
+                              packageId: activation.package_id,
+                              companyId: activation.company_id,
+                            });
                             setActionType("approve");
                           }}
                         >
@@ -139,7 +149,11 @@ export function TemplatePackageActivationsTab() {
                           size="sm"
                           variant="destructive"
                           onClick={() => {
-                            setSelectedActivation(activation.id);
+                            setSelectedActivation({
+                              id: activation.id,
+                              packageId: activation.package_id,
+                              companyId: activation.company_id,
+                            });
                             setActionType("reject");
                           }}
                         >
