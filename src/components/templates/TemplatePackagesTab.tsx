@@ -112,7 +112,7 @@ export function TemplatePackagesTab() {
             </TabsTrigger>
             <TabsTrigger value="my-packages" className="gap-2">
               <Package className="h-4 w-4" />
-              Meus Pacotes
+              {isSuperAdmin ? "Meus Pacotes" : "Pacotes Ativos"}
             </TabsTrigger>
             <TabsTrigger value="activations" className="gap-2">
               <Clock className="h-4 w-4" />
@@ -120,7 +120,7 @@ export function TemplatePackagesTab() {
             </TabsTrigger>
           </TabsList>
 
-          {activeTab !== "activations" && (
+          {activeTab !== "activations" && isSuperAdmin && (
             <Button onClick={() => setFormOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Novo Pacote
@@ -200,27 +200,35 @@ export function TemplatePackagesTab() {
           {myPackagesLoading ? (
             <div className="text-center py-8">Carregando...</div>
           ) : filteredMyPackages.length === 0 ? (
-          <EmptyState
-            icon={Package}
-            title="Nenhum pacote criado"
-            description="Você ainda não criou nenhum pacote de templates. Clique em 'Novo Pacote' para começar."
-            action={{
-              label: "Criar Primeiro Pacote",
-              onClick: () => setFormOpen(true),
-            }}
-            />
+            isSuperAdmin ? (
+              <EmptyState
+                icon={Package}
+                title="Nenhum pacote criado"
+                description="Você ainda não criou nenhum pacote de templates. Clique em 'Novo Pacote' para começar."
+                action={{
+                  label: "Criar Primeiro Pacote",
+                  onClick: () => setFormOpen(true),
+                }}
+              />
+            ) : (
+              <EmptyState
+                icon={Package}
+                title="Nenhum pacote ativo"
+                description="Você ainda não tem pacotes de templates ativos. Acesse o Marketplace para contratar pacotes."
+              />
+            )
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredMyPackages.map((pkg) => (
                 <TemplatePackageCard
                   key={pkg.id}
                   pkg={pkg}
-                  isOwner
+                  isOwner={isSuperAdmin}
                   onView={() => setDetailsPackage(pkg)}
-                  onEdit={() => {
+                  onEdit={isSuperAdmin ? () => {
                     setEditPackage(pkg);
                     setFormOpen(true);
-                  }}
+                  } : undefined}
                 />
               ))}
             </div>

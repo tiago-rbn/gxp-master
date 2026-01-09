@@ -311,13 +311,18 @@ export const usePackageActivations = () => {
       id, 
       status, 
       approvedBy,
-      notes 
+      notes,
+      packageId,
+      targetCompanyId,
     }: { 
       id: string; 
       status: 'approved' | 'rejected'; 
       approvedBy: string;
       notes?: string;
+      packageId?: string;
+      targetCompanyId?: string;
     }) => {
+      // Update activation status
       const { data, error } = await supabase
         .from("template_package_activations")
         .update({
@@ -331,13 +336,65 @@ export const usePackageActivations = () => {
         .single();
 
       if (error) throw error;
+
+      // If approved, copy templates to the target company
+      if (status === 'approved' && packageId && targetCompanyId) {
+        // Get all template items from the package
+        const { data: packageItems, error: itemsError } = await supabase
+          .from("template_package_items")
+          .select(`
+            template:document_templates(*)
+          `)
+          .eq("package_id", packageId);
+
+        if (itemsError) throw itemsError;
+
+        // Copy each template to the target company's document_templates
+        if (packageItems && packageItems.length > 0) {
+          const templatesToInsert = packageItems
+            .filter((item: any) => item.template)
+            .map((item: any) => {
+              const template = item.template;
+              return {
+                company_id: targetCompanyId,
+                name: template.name,
+                description: template.description,
+                document_type: template.document_type,
+                content: template.content,
+                placeholders: template.placeholders,
+                conditional_blocks: template.conditional_blocks,
+                gamp_category: template.gamp_category,
+                system_name: template.system_name,
+                version: "1.0",
+                is_active: true,
+                is_default: false,
+                parent_template_id: template.id, // Reference to original template
+                created_by: approvedBy,
+              };
+            });
+
+          if (templatesToInsert.length > 0) {
+            const { error: insertError } = await supabase
+              .from("document_templates")
+              .insert(templatesToInsert);
+
+            if (insertError) {
+              console.error("Error copying templates:", insertError);
+              // Don't throw - activation is already approved
+              toast.error("Ativação aprovada, mas houve erro ao copiar alguns templates.");
+            }
+          }
+        }
+      }
+
       return data;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["template-package-activations"] });
+      queryClient.invalidateQueries({ queryKey: ["document-templates"] });
       toast.success(
         variables.status === 'approved' 
-          ? "Pacote ativado com sucesso!" 
+          ? "Pacote ativado! Os templates foram copiados para a organização." 
           : "Solicitação rejeitada."
       );
     },
