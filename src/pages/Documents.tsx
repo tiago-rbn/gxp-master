@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Search, Filter, FileText, Eye, Download, Edit, Trash2, MoreHorizontal, Loader2, Sparkles } from "lucide-react";
+import { Plus, Search, Filter, FileText, Eye, Download, Edit, Trash2, MoreHorizontal, Loader2, Sparkles, Wand2 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,6 +32,7 @@ import { DocumentFormDialog } from "@/components/documents/DocumentFormDialog";
 import { DocumentViewDialog } from "@/components/documents/DocumentViewDialog";
 import { DeleteDocumentDialog } from "@/components/documents/DeleteDocumentDialog";
 import { AIDocumentDialog } from "@/components/documents/AIDocumentDialog";
+import { GenerateFromTemplateDialog } from "@/components/documents/GenerateFromTemplateDialog";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { useDocumentTypes, defaultDocumentTypes } from "@/hooks/useDocumentTypes";
@@ -60,6 +61,7 @@ export default function Documents() {
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isAIDialogOpen, setIsAIDialogOpen] = useState(false);
+  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [aiGeneratedContent, setAiGeneratedContent] = useState<{ content: string; type: string } | null>(null);
 
@@ -166,6 +168,10 @@ export default function Documents() {
           onClick: handleCreate,
         }}
       >
+        <Button variant="outline" onClick={() => setIsTemplateDialogOpen(true)}>
+          <Wand2 className="mr-2 h-4 w-4" />
+          Gerar de Template
+        </Button>
         <Button variant="outline" onClick={() => setIsAIDialogOpen(true)}>
           <Sparkles className="mr-2 h-4 w-4" />
           Gerar com IA
@@ -384,6 +390,16 @@ export default function Documents() {
         onOpenChange={setIsAIDialogOpen}
         onUseContent={(content, type) => {
           setAiGeneratedContent({ content, type });
+          setSelectedDocument(null);
+          setIsFormOpen(true);
+        }}
+      />
+
+      <GenerateFromTemplateDialog
+        open={isTemplateDialogOpen}
+        onOpenChange={setIsTemplateDialogOpen}
+        onGenerate={(data) => {
+          setAiGeneratedContent({ content: data.content, type: data.type });
           setSelectedDocument(null);
           setIsFormOpen(true);
         }}
