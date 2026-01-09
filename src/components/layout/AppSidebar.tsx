@@ -12,6 +12,7 @@ import {
   Building2,
   Link2,
   History,
+  Users,
 } from "lucide-react";
 import {
   Sidebar,
@@ -50,6 +51,7 @@ const configMenuItems = [
 
 const superAdminMenuItems = [
   { title: "Empresas", url: "/companies", icon: Building2 },
+  { title: "Usuários", url: "/users", icon: Users },
 ];
 
 export function AppSidebar() {
