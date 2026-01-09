@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { FileText, Wand2, Copy, Eye } from "lucide-react";
+import { FileText, Wand2, Copy, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -21,10 +21,15 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { useDocumentTemplatesNew, DocumentTemplate } from "@/hooks/useDocumentTemplatesNew";
 import { useSystemsForSelect } from "@/hooks/useRiskAssessments";
 import { useValidationProjects } from "@/hooks/useValidationProjects";
+import { useRequirements } from "@/hooks/useRequirements";
+import { useRiskAssessments } from "@/hooks/useRiskAssessments";
+import { useTestCases } from "@/hooks/useTestCases";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -44,6 +49,39 @@ interface PlaceholderValues {
   [key: string]: string;
 }
 
+// Helper to format list items as markdown table or list
+function formatAsTable(items: { code: string; title: string; status?: string | null }[], includeStatus = true): string {
+  if (items.length === 0) return "_Nenhum item encontrado_";
+  
+  const headers = includeStatus ? "| Código | Título | Status |" : "| Código | Título |";
+  const divider = includeStatus ? "|--------|--------|--------|" : "|--------|--------|";
+  const rows = items.map(item => 
+    includeStatus 
+      ? `| ${item.code} | ${item.title} | ${item.status || '-'} |`
+      : `| ${item.code} | ${item.title} |`
+  ).join("\n");
+  
+  return `${headers}\n${divider}\n${rows}`;
+}
+
+function formatAsList(items: { code: string; title: string }[]): string {
+  if (items.length === 0) return "_Nenhum item encontrado_";
+  return items.map(item => `- **${item.code}**: ${item.title}`).join("\n");
+}
+
+function formatRiskMatrix(risks: { title: string; risk_level?: string | null; probability?: number | null; severity?: number | null }[]): string {
+  if (risks.length === 0) return "_Nenhum risco encontrado_";
+  
+  const headers = "| Risco | Nível | Probabilidade | Severidade | RPN |";
+  const divider = "|-------|-------|---------------|------------|-----|";
+  const rows = risks.map(r => {
+    const rpn = (r.probability || 0) * (r.severity || 0);
+    return `| ${r.title} | ${r.risk_level || '-'} | ${r.probability || '-'} | ${r.severity || '-'} | ${rpn || '-'} |`;
+  }).join("\n");
+  
+  return `${headers}\n${divider}\n${rows}`;
+}
+
 export function GenerateFromTemplateDialog({
   open,
   onOpenChange,
@@ -52,6 +90,9 @@ export function GenerateFromTemplateDialog({
   const { templates, isLoading: templatesLoading } = useDocumentTemplatesNew();
   const { data: systems = [] } = useSystemsForSelect();
   const { projects = [] } = useValidationProjects();
+  const { requirements, isLoading: reqLoading } = useRequirements();
+  const { riskAssessments, isLoading: riskLoading } = useRiskAssessments();
+  const { testCases, isLoading: testLoading } = useTestCases();
   const { user } = useAuth();
 
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
@@ -60,6 +101,24 @@ export function GenerateFromTemplateDialog({
   const [documentTitle, setDocumentTitle] = useState<string>("");
   const [customPlaceholders, setCustomPlaceholders] = useState<PlaceholderValues>({});
   const [activeTab, setActiveTab] = useState<string>("config");
+  const [companyName, setCompanyName] = useState<string>("");
+
+  // Fetch company name
+  useEffect(() => {
+    const fetchCompany = async () => {
+      if (!user) return;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("company_id, companies:company_id(name)")
+        .eq("id", user.id)
+        .single();
+      
+      if (profile?.companies) {
+        setCompanyName((profile.companies as any).name || "");
+      }
+    };
+    if (open) fetchCompany();
+  }, [user, open]);
 
   const selectedTemplate = useMemo(() => 
     templates?.find(t => t.id === selectedTemplateId),
@@ -76,6 +135,27 @@ export function GenerateFromTemplateDialog({
     [projects, selectedProjectId]
   );
 
+  // Filter related data by system/project
+  const filteredRequirements = useMemo(() => {
+    return requirements.filter(r => 
+      (selectedSystemId && r.system_id === selectedSystemId) ||
+      (selectedProjectId && r.project_id === selectedProjectId)
+    );
+  }, [requirements, selectedSystemId, selectedProjectId]);
+
+  const filteredRisks = useMemo(() => {
+    return riskAssessments.filter(r => 
+      selectedSystemId && r.system_id === selectedSystemId
+    );
+  }, [riskAssessments, selectedSystemId]);
+
+  const filteredTestCases = useMemo(() => {
+    return testCases.filter(t => 
+      (selectedSystemId && t.system_id === selectedSystemId) ||
+      (selectedProjectId && t.project_id === selectedProjectId)
+    );
+  }, [testCases, selectedSystemId, selectedProjectId]);
+
   // Auto-fill placeholders based on selected system/project
   const autoFilledPlaceholders = useMemo<PlaceholderValues>(() => {
     const values: PlaceholderValues = {};
@@ -85,6 +165,7 @@ export function GenerateFromTemplateDialog({
     values["data.atual"] = format(now, "dd/MM/yyyy", { locale: ptBR });
     values["data.hora"] = format(now, "HH:mm", { locale: ptBR });
     values["data.completa"] = format(now, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+    values["data.ano"] = format(now, "yyyy");
 
     // Sistema
     if (selectedSystem) {
@@ -108,6 +189,7 @@ export function GenerateFromTemplateDialog({
         ? format(new Date(selectedProject.target_date), "dd/MM/yyyy", { locale: ptBR })
         : "";
       values["projeto.status"] = selectedProject.status || "";
+      values["projeto.progresso"] = `${selectedProject.progress || 0}%`;
     }
 
     // Usuário
@@ -117,10 +199,52 @@ export function GenerateFromTemplateDialog({
     }
 
     // Empresa
-    values["empresa.nome"] = ""; // Will be filled from profile if needed
+    values["empresa.nome"] = companyName;
+
+    // Requisitos
+    values["requisitos.total"] = String(filteredRequirements.length);
+    values["requisitos.aprovados"] = String(filteredRequirements.filter(r => r.status === "approved").length);
+    values["requisitos.pendentes"] = String(filteredRequirements.filter(r => r.status === "pending" || r.status === "draft").length);
+    values["requisitos.lista"] = formatAsList(filteredRequirements.map(r => ({ code: r.code, title: r.title })));
+    values["requisitos.tabela"] = formatAsTable(filteredRequirements.map(r => ({ code: r.code, title: r.title, status: r.status })));
+    values["requisitos.funcionais"] = formatAsList(
+      filteredRequirements.filter(r => r.type === "functional").map(r => ({ code: r.code, title: r.title }))
+    );
+    values["requisitos.nao_funcionais"] = formatAsList(
+      filteredRequirements.filter(r => r.type === "non_functional").map(r => ({ code: r.code, title: r.title }))
+    );
+
+    // Riscos
+    values["riscos.total"] = String(filteredRisks.length);
+    values["riscos.altos"] = String(filteredRisks.filter(r => r.risk_level === "high" || r.risk_level === "critical").length);
+    values["riscos.medios"] = String(filteredRisks.filter(r => r.risk_level === "medium").length);
+    values["riscos.baixos"] = String(filteredRisks.filter(r => r.risk_level === "low").length);
+    values["riscos.lista"] = formatAsList(filteredRisks.map(r => ({ code: r.assessment_type, title: r.title })));
+    values["riscos.tabela"] = formatRiskMatrix(filteredRisks);
+    values["riscos.matriz"] = formatRiskMatrix(filteredRisks);
+
+    // Casos de Teste
+    values["testes.total"] = String(filteredTestCases.length);
+    values["testes.executados"] = String(filteredTestCases.filter(t => t.status === "passed" || t.status === "failed").length);
+    values["testes.aprovados"] = String(filteredTestCases.filter(t => t.status === "passed").length);
+    values["testes.reprovados"] = String(filteredTestCases.filter(t => t.status === "failed").length);
+    values["testes.pendentes"] = String(filteredTestCases.filter(t => t.status === "pending").length);
+    values["testes.lista"] = formatAsList(filteredTestCases.map(t => ({ code: t.code, title: t.title })));
+    values["testes.tabela"] = formatAsTable(filteredTestCases.map(t => ({ code: t.code, title: t.title, status: t.status })));
+
+    // Estatísticas combinadas
+    const passRate = filteredTestCases.length > 0 
+      ? Math.round((filteredTestCases.filter(t => t.status === "passed").length / filteredTestCases.length) * 100)
+      : 0;
+    values["testes.taxa_aprovacao"] = `${passRate}%`;
+
+    const reqCoverage = filteredRequirements.length > 0
+      ? Math.round((filteredRequirements.filter(r => r.status === "approved").length / filteredRequirements.length) * 100)
+      : 0;
+    values["requisitos.cobertura"] = `${reqCoverage}%`;
 
     return values;
-  }, [selectedSystem, selectedProject, user]);
+  }, [selectedSystem, selectedProject, user, companyName, filteredRequirements, filteredRisks, filteredTestCases]);
 
   // Extract placeholders from template content
   const extractedPlaceholders = useMemo(() => {
@@ -345,6 +469,48 @@ export function GenerateFromTemplateDialog({
                 placeholder="Ex: URS - Sistema LIMS v2.0"
               />
             </div>
+
+            {/* Available placeholders info */}
+            {(selectedSystemId || selectedProjectId) && (
+              <div className="p-4 rounded-lg border bg-primary/5 space-y-3">
+                <h4 className="font-medium text-sm flex items-center gap-2">
+                  <Wand2 className="h-4 w-4 text-primary" />
+                  Dados Disponíveis para Preenchimento
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                  <div className="space-y-1">
+                    <span className="text-muted-foreground">Requisitos</span>
+                    <p className="font-medium">{filteredRequirements.length} encontrados</p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-muted-foreground">Riscos</span>
+                    <p className="font-medium">{filteredRisks.length} encontrados</p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-muted-foreground">Casos de Teste</span>
+                    <p className="font-medium">{filteredTestCases.length} encontrados</p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-muted-foreground">Status</span>
+                    <p className="font-medium">
+                      {reqLoading || riskLoading || testLoading ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : "Carregado"}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  <p className="font-medium mb-1">Placeholders disponíveis:</p>
+                  <div className="flex flex-wrap gap-1">
+                    <Badge variant="outline" className="text-xs font-mono">{"{{requisitos.tabela}}"}</Badge>
+                    <Badge variant="outline" className="text-xs font-mono">{"{{riscos.matriz}}"}</Badge>
+                    <Badge variant="outline" className="text-xs font-mono">{"{{testes.tabela}}"}</Badge>
+                    <Badge variant="outline" className="text-xs font-mono">{"{{requisitos.total}}"}</Badge>
+                    <Badge variant="outline" className="text-xs font-mono">{"{{testes.taxa_aprovacao}}"}</Badge>
+                  </div>
+                </div>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="placeholders" className="flex-1 overflow-hidden mt-4">
@@ -359,24 +525,39 @@ export function GenerateFromTemplateDialog({
                       <Wand2 className="h-4 w-4 text-primary" />
                       Preenchidos Automaticamente
                     </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-3">
                       {Object.entries(autoFilledPlaceholders)
                         .filter(([key]) => extractedPlaceholders.includes(key))
-                        .map(([key, value]) => (
-                          <div key={key} className="space-y-1">
-                            <Label className="text-xs font-mono text-muted-foreground">
-                              {`{{${key}}}`}
-                            </Label>
-                            <Input
-                              value={value}
-                              onChange={(e) => setCustomPlaceholders(prev => ({
-                                ...prev,
-                                [key]: e.target.value
-                              }))}
-                              className="h-8 text-sm"
-                            />
-                          </div>
-                        ))}
+                        .map(([key, value]) => {
+                          const isMultiLine = value.includes("\n") || value.length > 100;
+                          return (
+                            <div key={key} className={isMultiLine ? "col-span-2" : ""}>
+                              <Label className="text-xs font-mono text-muted-foreground mb-1 block">
+                                {`{{${key}}}`}
+                              </Label>
+                              {isMultiLine ? (
+                                <Textarea
+                                  value={customPlaceholders[key] ?? value}
+                                  onChange={(e) => setCustomPlaceholders(prev => ({
+                                    ...prev,
+                                    [key]: e.target.value
+                                  }))}
+                                  className="text-xs font-mono min-h-[100px]"
+                                  rows={4}
+                                />
+                              ) : (
+                                <Input
+                                  value={customPlaceholders[key] ?? value}
+                                  onChange={(e) => setCustomPlaceholders(prev => ({
+                                    ...prev,
+                                    [key]: e.target.value
+                                  }))}
+                                  className="h-8 text-sm"
+                                />
+                              )}
+                            </div>
+                          );
+                        })}
                     </div>
                   </div>
                 )}
