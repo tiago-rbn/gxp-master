@@ -14,6 +14,7 @@ import Documents from "./pages/Documents";
 import Changes from "./pages/Changes";
 import Settings from "./pages/Settings";
 import Companies from "./pages/Companies";
+import Users from "./pages/Users";
 import AcceptInvite from "./pages/AcceptInvite";
 import NotFound from "./pages/NotFound";
 import RTM from "./pages/RTM";
@@ -42,6 +43,7 @@ const App = () => (
             <Route path="/audit-trail" element={<ProtectedRoute><AuditTrail /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/companies" element={<ProtectedRoute><Companies /></ProtectedRoute>} />
+            <Route path="/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
