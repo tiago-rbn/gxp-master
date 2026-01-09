@@ -404,7 +404,7 @@ export function GenerateFromTemplateDialog({
                 </SelectTrigger>
                 <SelectContent>
                   {templatesLoading && (
-                    <SelectItem value="" disabled>Carregando...</SelectItem>
+                    <SelectItem value="__loading__" disabled>Carregando...</SelectItem>
                   )}
                   {filteredTemplates.map((template) => (
                     <SelectItem key={template.id} value={template.id}>
