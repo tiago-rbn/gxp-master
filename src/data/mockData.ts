@@ -1,4 +1,4 @@
-// Mock data for CSVOne prototype
+// Mock data for RBNValida prototype
 
 export interface System {
   id: string;
