@@ -725,3 +725,390 @@ export function exportSystemsInventoryToPDF(systems: any[]): void {
 
   pdf.save(`Inventario_Sistemas_${new Date().toISOString().slice(0, 10)}.pdf`);
 }
+
+// Risk Assessment PDF Export (grouped by system)
+interface RiskAssessmentData {
+  id: string;
+  code?: string | null;
+  title: string;
+  description?: string | null;
+  assessment_type: string;
+  probability?: number | null;
+  severity?: number | null;
+  detectability?: number | null;
+  risk_level?: string | null;
+  residual_risk?: string | null;
+  controls?: string | null;
+  status?: string | null;
+  version?: string | null;
+  tags?: string[] | null;
+  created_at: string;
+  system?: { name: string } | null;
+  assessor?: { full_name: string } | null;
+  approver?: { full_name: string } | null;
+  reviewer?: { full_name: string } | null;
+}
+
+const riskLevelLabels: Record<string, string> = {
+  low: "Baixo",
+  medium: "Médio",
+  high: "Alto",
+  critical: "Crítico",
+};
+
+const riskLevelColors: Record<string, number[]> = {
+  low: [34, 197, 94],
+  medium: [234, 179, 8],
+  high: [239, 68, 68],
+  critical: [153, 27, 27],
+};
+
+export async function exportRiskAssessmentPDF(
+  risks: RiskAssessmentData[],
+  systemName?: string,
+  options?: ExportOptions
+): Promise<void> {
+  const pdf = new jsPDF({
+    orientation: "landscape",
+    unit: "mm",
+    format: "a4",
+  });
+
+  let logoBase64: string | null = null;
+  if (options?.companyLogo) {
+    logoBase64 = await loadImageAsBase64(options.companyLogo);
+  }
+
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const margin = 15;
+  const contentWidth = pageWidth - margin * 2;
+
+  // Group risks by system
+  const grouped = new Map<string, { name: string; risks: RiskAssessmentData[] }>();
+  const targetRisks = systemName
+    ? risks.filter((r) => r.system?.name === systemName)
+    : risks;
+
+  targetRisks.forEach((risk) => {
+    const key = risk.system?.name || "Sem Sistema";
+    if (!grouped.has(key)) {
+      grouped.set(key, { name: key, risks: [] });
+    }
+    grouped.get(key)!.risks.push(risk);
+  });
+
+  let isFirstPage = true;
+
+  for (const [, group] of grouped) {
+    if (!isFirstPage) pdf.addPage();
+    isFirstPage = false;
+
+    let y = margin;
+
+    // ─── COVER / HEADER ───
+    pdf.setFillColor(153, 27, 27);
+    pdf.rect(0, 0, pageWidth, 30, "F");
+
+    let textStartX = margin;
+    if (logoBase64) {
+      try {
+        pdf.addImage(logoBase64, "AUTO", margin, 3, 24, 24);
+        textStartX = margin + 28;
+      } catch { /* ignore */ }
+    }
+
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(9);
+    pdf.setFont("helvetica", "normal");
+    pdf.text("RELATÓRIO DE AVALIAÇÃO DE RISCOS FUNCIONAIS — GAMP5", textStartX, 11);
+
+    if (options?.companyName) {
+      pdf.setFontSize(8);
+      pdf.text(options.companyName, pageWidth - margin, 8, { align: "right" });
+    }
+
+    pdf.setFontSize(15);
+    pdf.setFont("helvetica", "bold");
+    pdf.text(`Sistema: ${group.name}`, textStartX, 22);
+
+    pdf.setFontSize(8);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(
+      `Gerado em: ${new Date().toLocaleDateString("pt-BR")} ${new Date().toLocaleTimeString("pt-BR")}`,
+      pageWidth - margin,
+      16,
+      { align: "right" }
+    );
+    pdf.text(`Total: ${group.risks.length} risco(s)`, pageWidth - margin, 22, {
+      align: "right",
+    });
+
+    y = 36;
+
+    // ─── SUMMARY CARDS ───
+    const highCount = group.risks.filter(
+      (r) => r.risk_level === "high" || r.risk_level === "critical"
+    ).length;
+    const mediumCount = group.risks.filter((r) => r.risk_level === "medium").length;
+    const lowCount = group.risks.filter((r) => r.risk_level === "low").length;
+
+    const cardW = 40;
+    const cardH = 14;
+    const cardGap = 5;
+    const cardsStartX = margin;
+
+    // Critical/High
+    pdf.setFillColor(254, 226, 226);
+    pdf.roundedRect(cardsStartX, y, cardW, cardH, 2, 2, "F");
+    pdf.setTextColor(153, 27, 27);
+    pdf.setFontSize(14);
+    pdf.setFont("helvetica", "bold");
+    pdf.text(String(highCount), cardsStartX + 5, y + 10);
+    pdf.setFontSize(7);
+    pdf.setFont("helvetica", "normal");
+    pdf.text("Alto / Crítico", cardsStartX + 18, y + 10);
+
+    // Medium
+    pdf.setFillColor(254, 249, 195);
+    pdf.roundedRect(cardsStartX + cardW + cardGap, y, cardW, cardH, 2, 2, "F");
+    pdf.setTextColor(133, 77, 14);
+    pdf.setFontSize(14);
+    pdf.setFont("helvetica", "bold");
+    pdf.text(String(mediumCount), cardsStartX + cardW + cardGap + 5, y + 10);
+    pdf.setFontSize(7);
+    pdf.setFont("helvetica", "normal");
+    pdf.text("Médio", cardsStartX + cardW + cardGap + 18, y + 10);
+
+    // Low
+    pdf.setFillColor(220, 252, 231);
+    pdf.roundedRect(cardsStartX + (cardW + cardGap) * 2, y, cardW, cardH, 2, 2, "F");
+    pdf.setTextColor(22, 101, 52);
+    pdf.setFontSize(14);
+    pdf.setFont("helvetica", "bold");
+    pdf.text(String(lowCount), cardsStartX + (cardW + cardGap) * 2 + 5, y + 10);
+    pdf.setFontSize(7);
+    pdf.setFont("helvetica", "normal");
+    pdf.text("Baixo", cardsStartX + (cardW + cardGap) * 2 + 18, y + 10);
+
+    y += cardH + 6;
+
+    // ─── RISK TABLE ───
+    const colWidths = [28, 60, 18, 18, 18, 16, 22, 22, 50, 20];
+    const headers = [
+      "Código", "Título", "Sev.", "Prob.", "Det.", "RPN",
+      "Nível", "Residual", "Controles", "Status",
+    ];
+
+    const drawTableHeader = () => {
+      pdf.setFillColor(241, 245, 249);
+      pdf.rect(margin, y, contentWidth, 8, "F");
+      pdf.setTextColor(71, 85, 105);
+      pdf.setFontSize(6.5);
+      pdf.setFont("helvetica", "bold");
+      let x = margin + 2;
+      headers.forEach((h, i) => {
+        pdf.text(h, x, y + 5.5);
+        x += colWidths[i];
+      });
+      y += 10;
+    };
+
+    drawTableHeader();
+
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(6.5);
+
+    group.risks
+      .sort((a, b) => {
+        const rpnA = (a.probability || 1) * (a.severity || 1) * (a.detectability || 1);
+        const rpnB = (b.probability || 1) * (b.severity || 1) * (b.detectability || 1);
+        return rpnB - rpnA; // descending by RPN
+      })
+      .forEach((risk) => {
+        if (y > pageHeight - 20) {
+          pdf.addPage();
+          y = margin;
+          drawTableHeader();
+          pdf.setFont("helvetica", "normal");
+          pdf.setFontSize(6.5);
+        }
+
+        const rpn =
+          (risk.probability || 1) * (risk.severity || 1) * (risk.detectability || 1);
+        const level = risk.risk_level || "medium";
+        const residual = risk.residual_risk || "low";
+
+        let x = margin + 2;
+        pdf.setTextColor(0, 0, 0);
+
+        const cells = [
+          risk.code || "-",
+          risk.title.substring(0, 35),
+          String(risk.severity || "-"),
+          String(risk.probability || "-"),
+          String(risk.detectability || "-"),
+          String(rpn),
+        ];
+
+        cells.forEach((cell, i) => {
+          pdf.text(cell, x, y + 4);
+          x += colWidths[i];
+        });
+
+        // Risk level badge
+        const lvlColor = riskLevelColors[level] || [156, 163, 175];
+        pdf.setFillColor(lvlColor[0], lvlColor[1], lvlColor[2]);
+        pdf.roundedRect(x, y + 0.5, 18, 5, 1, 1, "F");
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(5.5);
+        pdf.text(riskLevelLabels[level] || level, x + 2, y + 4);
+        x += colWidths[6];
+
+        // Residual risk badge
+        const resColor = riskLevelColors[residual] || [156, 163, 175];
+        pdf.setFillColor(resColor[0], resColor[1], resColor[2]);
+        pdf.roundedRect(x, y + 0.5, 18, 5, 1, 1, "F");
+        pdf.setTextColor(255, 255, 255);
+        pdf.text(riskLevelLabels[residual] || residual, x + 2, y + 4);
+        x += colWidths[7];
+
+        // Controls
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFontSize(6.5);
+        pdf.text((risk.controls || "-").substring(0, 32), x, y + 4);
+        x += colWidths[8];
+
+        // Status
+        pdf.text(statusLabels[risk.status || "draft"] || "-", x, y + 4);
+
+        // Row border
+        pdf.setDrawColor(226, 232, 240);
+        pdf.line(margin, y + 7, pageWidth - margin, y + 7);
+        y += 8;
+      });
+
+    // ─── 5×5 RISK MATRIX ───
+    if (y + 55 > pageHeight - 20) {
+      pdf.addPage();
+      y = margin;
+    }
+    y += 5;
+
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFontSize(10);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Matriz de Risco GAMP5 (5×5)", margin, y);
+    y += 8;
+
+    const cellSize = 9;
+    const matrixX = margin + 12;
+    const matrixY = y;
+
+    // Draw cells
+    for (let sev = 5; sev >= 1; sev--) {
+      for (let prob = 1; prob <= 5; prob++) {
+        const score = prob * sev;
+        let fillR = 220, fillG = 252, fillB = 231; // green
+        if (score >= 16) { fillR = 254; fillG = 226; fillB = 226; } // red
+        else if (score >= 8) { fillR = 254; fillG = 249; fillB = 195; } // yellow
+
+        const cx = matrixX + (prob - 1) * cellSize;
+        const cy = matrixY + (5 - sev) * cellSize;
+
+        pdf.setFillColor(fillR, fillG, fillB);
+        pdf.rect(cx, cy, cellSize, cellSize, "F");
+        pdf.setDrawColor(200, 200, 200);
+        pdf.rect(cx, cy, cellSize, cellSize, "S");
+
+        // Check if any risk matches
+        const hasRisk = group.risks.some(
+          (r) => (r.probability || 0) === prob && (r.severity || 0) === sev
+        );
+
+        if (hasRisk) {
+          pdf.setFillColor(0, 0, 0);
+          pdf.circle(cx + cellSize / 2, cy + cellSize / 2, 2.5, "F");
+          pdf.setTextColor(255, 255, 255);
+          pdf.setFontSize(5);
+          const count = group.risks.filter(
+            (r) => (r.probability || 0) === prob && (r.severity || 0) === sev
+          ).length;
+          pdf.text(String(count), cx + cellSize / 2 - 1.2, cy + cellSize / 2 + 1.5);
+        } else {
+          pdf.setTextColor(120, 120, 120);
+          pdf.setFontSize(5);
+          pdf.text(String(score), cx + cellSize / 2 - 2, cy + cellSize / 2 + 1.5);
+        }
+      }
+    }
+
+    // Axis labels
+    pdf.setTextColor(100, 100, 100);
+    pdf.setFontSize(6);
+    pdf.setFont("helvetica", "normal");
+    pdf.text("Probabilidade →", matrixX + 5, matrixY + 5 * cellSize + 6);
+    // Vertical label
+    pdf.text("Impacto", matrixX - 11, matrixY + 2.5 * cellSize);
+
+    // Legend
+    const legendX = matrixX + 5 * cellSize + 10;
+    pdf.setFontSize(6);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Legenda:", legendX, matrixY + 2);
+    pdf.setFont("helvetica", "normal");
+
+    const legendItems = [
+      { label: "Baixo (1-7)", color: [220, 252, 231] },
+      { label: "Médio (8-15)", color: [254, 249, 195] },
+      { label: "Alto (16-25)", color: [254, 226, 226] },
+    ];
+    legendItems.forEach((item, i) => {
+      const ly = matrixY + 8 + i * 7;
+      pdf.setFillColor(item.color[0], item.color[1], item.color[2]);
+      pdf.rect(legendX, ly, 5, 5, "F");
+      pdf.setTextColor(0, 0, 0);
+      pdf.text(item.label, legendX + 7, ly + 4);
+    });
+
+    // Methodology note
+    const noteY = matrixY + 5 * cellSize + 12;
+    pdf.setFontSize(6);
+    pdf.setTextColor(100, 100, 100);
+    pdf.text(
+      "Metodologia GAMP5 2ª Ed. — RPN = Severidade × Probabilidade × Detectabilidade (escala 1-5, RPN máx. 125)",
+      margin,
+      noteY
+    );
+    pdf.text(
+      "Classificação: Baixo (1-14) · Médio (15-39) · Alto (40-79) · Crítico (80-125)",
+      margin,
+      noteY + 5
+    );
+  }
+
+  // Footer on all pages
+  const totalPages = pdf.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    pdf.setPage(i);
+    pdf.setFontSize(7);
+    pdf.setTextColor(128, 128, 128);
+    pdf.text(
+      `Relatório de Avaliação de Riscos — Página ${i} de ${totalPages}`,
+      pageWidth / 2,
+      pageHeight - 8,
+      { align: "center" }
+    );
+    pdf.text(
+      new Date().toLocaleDateString("pt-BR") + " " + new Date().toLocaleTimeString("pt-BR"),
+      pageWidth - margin,
+      pageHeight - 8,
+      { align: "right" }
+    );
+  }
+
+  const safeName = systemName
+    ? systemName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_").substring(0, 30)
+    : "Todos";
+  pdf.save(`Avaliacao_Riscos_${safeName}_${new Date().toISOString().slice(0, 10)}.pdf`);
+}
