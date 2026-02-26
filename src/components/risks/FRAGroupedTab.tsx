@@ -152,13 +152,14 @@ export function FRAGroupedTab({ risks, isLoading, onView, onEdit, onDelete, onCr
                   <CollapsibleContent>
                     <div className="border-t">
                       <Table>
-                        <TableHeader>
+                         <TableHeader>
                           <TableRow>
+                            <TableHead>Código</TableHead>
                             <TableHead>Título</TableHead>
                             <TableHead>Nível de Risco</TableHead>
                             <TableHead>RPN (GAMP5)</TableHead>
                             <TableHead>Status</TableHead>
-                            <TableHead>Risco Residual</TableHead>
+                            <TableHead>Versão</TableHead>
                             <TableHead>Data</TableHead>
                             <TableHead className="w-[50px]"></TableHead>
                           </TableRow>
@@ -171,13 +172,18 @@ export function FRAGroupedTab({ risks, isLoading, onView, onEdit, onDelete, onCr
 
                             return (
                               <TableRow key={risk.id} className="cursor-pointer hover:bg-muted/50" onClick={() => onView(risk)}>
+                                <TableCell>
+                                  <Badge variant="outline" className="font-mono text-xs">{risk.code || "-"}</Badge>
+                                </TableCell>
                                 <TableCell className="font-medium">{risk.title}</TableCell>
                                 <TableCell><RiskIndicator level={riskLevel} /></TableCell>
                                 <TableCell>{rpn}</TableCell>
                                 <TableCell>
                                   <Badge variant="outline">{statusLabels[risk.status || "draft"]}</Badge>
                                 </TableCell>
-                                <TableCell><RiskIndicator level={residualLevel} size="sm" /></TableCell>
+                                <TableCell>
+                                  <Badge variant="secondary" className="text-xs">v{risk.version || "1.0"}</Badge>
+                                </TableCell>
                                 <TableCell>{new Date(risk.created_at).toLocaleDateString("pt-BR")}</TableCell>
                                 <TableCell>
                                   <DropdownMenu>

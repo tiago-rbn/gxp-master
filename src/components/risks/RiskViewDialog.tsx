@@ -19,7 +19,8 @@ import { useTestCases } from "@/hooks/useTestCases";
 import { useUserCompanies } from "@/hooks/useUserCompanies";
 import { RiskTraceabilityTab } from "./RiskTraceabilityTab";
 import { MitigationActionsTab } from "./MitigationActionsTab";
-import { Plus, X, FileText, TestTube2, Tag } from "lucide-react";
+import { RiskVersionHistory } from "./RiskVersionHistory";
+import { Plus, X, FileText, TestTube2, Tag, History } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -154,7 +155,13 @@ export function RiskViewDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{risk.title}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            {risk.code && (
+              <Badge variant="outline" className="font-mono text-xs">{risk.code}</Badge>
+            )}
+            {risk.title}
+            <Badge variant="secondary" className="text-xs ml-2">v{(risk as any).version || "1.0"}</Badge>
+          </DialogTitle>
           <DialogDescription>
             {risk.assessment_type === "IRA"
               ? "Avaliação de Risco Inicial"
@@ -165,7 +172,7 @@ export function RiskViewDialog({
         </DialogHeader>
 
         <Tabs defaultValue="details" className="w-full">
-          <TabsList className={`grid w-full ${isIRA ? "grid-cols-3" : "grid-cols-7"}`}>
+          <TabsList className={`grid w-full ${isIRA ? "grid-cols-3" : "grid-cols-8"}`}>
             <TabsTrigger value="details">Detalhes</TabsTrigger>
             <TabsTrigger value="team">Responsáveis</TabsTrigger>
             {!isIRA && <TabsTrigger value="requirements">Requisitos</TabsTrigger>}
@@ -173,6 +180,10 @@ export function RiskViewDialog({
             <TabsTrigger value="mitigation">Mitigação</TabsTrigger>
             {!isIRA && <TabsTrigger value="traceability">Rastreabilidade</TabsTrigger>}
             {!isIRA && <TabsTrigger value="matrix">Matriz</TabsTrigger>}
+            {!isIRA && <TabsTrigger value="history" className="gap-1">
+              <History className="h-3 w-3" />
+              Histórico
+            </TabsTrigger>}
           </TabsList>
 
           <TabsContent value="details" className="space-y-4 pt-4">
@@ -449,6 +460,12 @@ export function RiskViewDialog({
                   Metodologia GAMP5 2ª Edição - Avaliação baseada em Impacto GxP (segurança do paciente, qualidade do produto, integridade de dados) × Probabilidade de ocorrência
                 </div>
               </div>
+            </TabsContent>
+          )}
+
+          {!isIRA && (
+            <TabsContent value="history" className="pt-4">
+              <RiskVersionHistory riskId={risk.id} />
             </TabsContent>
           )}
         </Tabs>

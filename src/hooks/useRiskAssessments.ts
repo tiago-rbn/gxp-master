@@ -43,9 +43,20 @@ export function useRiskAssessments() {
 
       if (!profile?.company_id) throw new Error("Company not found");
 
+      // Generate code for FRA risks
+      let code: string | undefined;
+      if (riskAssessment.assessment_type !== "IRA") {
+        const { data: codeData } = await supabase.rpc("generate_risk_code", {
+          _system_id: riskAssessment.system_id || null,
+          _risk_level: (riskAssessment.risk_level as string) || "medium",
+          _company_id: profile.company_id,
+        });
+        code = codeData as string;
+      }
+
       const { data, error } = await supabase
         .from("risk_assessments")
-        .insert({ ...riskAssessment, company_id: profile.company_id })
+        .insert({ ...riskAssessment, company_id: profile.company_id, ...(code ? { code } : {}) })
         .select()
         .single();
 
@@ -63,7 +74,46 @@ export function useRiskAssessments() {
   });
 
   const updateRiskAssessment = useMutation({
-    mutationFn: async ({ id, ...updates }: RiskAssessmentUpdate & { id: string }) => {
+    mutationFn: async ({ id, change_summary, ...updates }: RiskAssessmentUpdate & { id: string; change_summary?: string }) => {
+      // Save current version before updating
+      const { data: current } = await supabase
+        .from("risk_assessments")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (current) {
+        // Increment version
+        const currentVersion = current.version || "1.0";
+        const versionParts = currentVersion.split(".");
+        const newMinor = parseInt(versionParts[1] || "0") + 1;
+        const newVersion = `${versionParts[0]}.${newMinor}`;
+
+        // Save snapshot of current state
+        await supabase.from("risk_assessment_versions").insert({
+          risk_assessment_id: id,
+          company_id: current.company_id,
+          version: currentVersion,
+          title: current.title,
+          description: current.description,
+          assessment_type: current.assessment_type,
+          system_id: current.system_id,
+          probability: current.probability,
+          severity: current.severity,
+          detectability: current.detectability,
+          risk_level: current.risk_level as string,
+          residual_risk: current.residual_risk as string,
+          controls: current.controls,
+          status: current.status as string,
+          tags: current.tags || [],
+          change_summary: change_summary || "Atualização",
+          changed_by: user?.id,
+        });
+
+        // Update with new version
+        updates = { ...updates, version: newVersion } as any;
+      }
+
       const { data, error } = await supabase
         .from("risk_assessments")
         .update(updates)
@@ -76,6 +126,7 @@ export function useRiskAssessments() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["risk_assessments"] });
+      queryClient.invalidateQueries({ queryKey: ["risk_assessment_versions"] });
       toast.success("Avaliação de risco atualizada com sucesso!");
     },
     onError: (error) => {

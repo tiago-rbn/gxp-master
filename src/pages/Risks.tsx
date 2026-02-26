@@ -141,7 +141,7 @@ export default function Risks() {
     };
     if (selectedRisk) {
       updateRiskAssessment.mutate(
-        { id: selectedRisk.id, ...payload },
+        { id: selectedRisk.id, change_summary: values.change_summary, ...payload },
         { onSuccess: () => setIsFRAFormOpen(false) }
       );
     } else {
