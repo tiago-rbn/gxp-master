@@ -31,6 +31,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import DOMPurify from "dompurify";
 
 interface Placeholder {
   key: string;
@@ -252,7 +253,10 @@ Exemplo: {{sistema.nome}}, {{autor.nome}}, {{documento.data}}"
           <ScrollArea className="h-[400px] p-4">
             <div
               className="prose prose-sm dark:prose-invert max-w-none"
-              dangerouslySetInnerHTML={{ __html: renderPreview() }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(renderPreview(), {
+                ALLOWED_TAGS: ['h1', 'h2', 'h3', 'strong', 'em', 'code', 'a', 'li', 'br', 'span', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'div', 'p'],
+                ALLOWED_ATTR: ['href', 'class', 'target'],
+              }) }}
             />
           </ScrollArea>
         </TabsContent>
