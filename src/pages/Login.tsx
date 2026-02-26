@@ -75,7 +75,7 @@ export default function Login() {
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary">
             <Shield className="h-9 w-9 text-primary-foreground" />
           </div>
-          <h1 className="mt-4 text-2xl font-bold">CSVOne</h1>
+          <h1 className="mt-4 text-2xl font-bold">RBNValida</h1>
           <p className="text-muted-foreground">Plataforma Completa para Validação de Sistemas</p>
         </div>
 
@@ -140,7 +140,7 @@ export default function Login() {
         </Card>
 
         <p className="mt-8 text-center text-xs text-muted-foreground">
-          © 2024 CSVOne. Baseado em GAMP 5.
+          © 2024 RBNValida. Baseado em GAMP 5.
           <br />
           Preparado para 21 CFR Part 11 e LGPD.
         </p>

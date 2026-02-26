@@ -83,7 +83,7 @@ export function AppSidebar() {
           </div>
           {!isCollapsed && (
             <div className="flex flex-col">
-              <span className="font-semibold text-sidebar-foreground">CSVOne</span>
+              <span className="font-semibold text-sidebar-foreground">RBNValida</span>
               <span className="text-xs text-sidebar-foreground/60">Validação de Sistemas</span>
             </div>
           )}
