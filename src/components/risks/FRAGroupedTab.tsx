@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Search, Eye, Edit, Trash2, Loader2, ChevronDown, ChevronRight, FolderOpen, AlertTriangle, Package } from "lucide-react";
+import { Plus, Search, Eye, Edit, Trash2, Loader2, ChevronDown, ChevronRight, FolderOpen, AlertTriangle, Package, FileDown } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,8 @@ import { MoreHorizontal } from "lucide-react";
 import {
   Collapsible, CollapsibleContent, CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-
+import { exportRiskAssessmentPDF } from "@/lib/pdfExport";
+import { useUserCompanies } from "@/hooks/useUserCompanies";
 interface FRAGroupedTabProps {
   risks: any[];
   isLoading: boolean;
@@ -38,6 +39,7 @@ const statusLabels: Record<string, string> = {
 export function FRAGroupedTab({ risks, isLoading, onView, onEdit, onDelete, onCreate, onLoadTemplate }: FRAGroupedTabProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedSystems, setExpandedSystems] = useState<Set<string>>(new Set(["no-system"]));
+  const { activeCompany } = useUserCompanies();
 
   const filtered = risks.filter((r) =>
     r.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -69,6 +71,20 @@ export function FRAGroupedTab({ risks, isLoading, onView, onEdit, onDelete, onCr
     setExpandedSystems(new Set(Array.from(grouped.keys())));
   };
 
+  const handleExportAll = () => {
+    exportRiskAssessmentPDF(risks, undefined, {
+      companyName: activeCompany?.name || undefined,
+      companyLogo: (activeCompany as any)?.logo_url || undefined,
+    });
+  };
+
+  const handleExportSystem = (systemName: string) => {
+    exportRiskAssessmentPDF(risks, systemName, {
+      companyName: activeCompany?.name || undefined,
+      companyLogo: (activeCompany as any)?.logo_url || undefined,
+    });
+  };
+
   return (
     <div className="space-y-4">
       <Card>
@@ -84,6 +100,10 @@ export function FRAGroupedTab({ risks, isLoading, onView, onEdit, onDelete, onCr
               />
             </div>
             <div className="flex gap-2">
+              <Button variant="outline" onClick={handleExportAll} disabled={risks.length === 0}>
+                <FileDown className="mr-2 h-4 w-4" />
+                Exportar PDF
+              </Button>
               <Button variant="outline" onClick={expandAll}>Expandir Todos</Button>
               <Button variant="outline" onClick={onLoadTemplate}>
                 <Package className="mr-2 h-4 w-4" />
@@ -139,6 +159,15 @@ export function FRAGroupedTab({ risks, isLoading, onView, onEdit, onDelete, onCr
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={(e) => { e.stopPropagation(); handleExportSystem(group.name); }}
+                          >
+                            <FileDown className="mr-1 h-3 w-3" />
+                            PDF
+                          </Button>
                           {highCount > 0 && (
                             <Badge variant="destructive">{highCount} Alto(s)</Badge>
                           )}
