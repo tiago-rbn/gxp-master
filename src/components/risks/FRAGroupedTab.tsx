@@ -156,7 +156,7 @@ export function FRAGroupedTab({ risks, isLoading, onView, onEdit, onDelete, onCr
                           <TableRow>
                             <TableHead>Título</TableHead>
                             <TableHead>Nível de Risco</TableHead>
-                            <TableHead>RPN</TableHead>
+                            <TableHead>RPN (GAMP5)</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead>Risco Residual</TableHead>
                             <TableHead>Data</TableHead>

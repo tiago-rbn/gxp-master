@@ -60,28 +60,25 @@ const riskLevelToOldFormat: Record<string, "High" | "Medium" | "Low"> = {
   low: "Low",
 };
 
-// Risk Matrix Component
+// GAMP5 Risk Matrix Component (5x5)
 function RiskMatrix({ probability, severity }: { probability: number; severity: number }) {
-  const probLevel = Math.ceil(probability / 3.33);
-  const sevLevel = Math.ceil(severity / 3.33);
-  
   const cells = [];
-  for (let s = 3; s >= 1; s--) {
-    for (let p = 1; p <= 3; p++) {
-      const isActive = p === probLevel && s === sevLevel;
+  for (let s = 5; s >= 1; s--) {
+    for (let p = 1; p <= 5; p++) {
+      const isActive = p === probability && s === severity;
       const riskScore = p * s;
       let color = "bg-success/20";
-      if (riskScore >= 6) color = "bg-risk-high/20";
-      else if (riskScore >= 3) color = "bg-risk-medium/20";
+      if (riskScore >= 16) color = "bg-risk-high/20";
+      else if (riskScore >= 8) color = "bg-risk-medium/20";
       
       cells.push(
         <div
           key={`${p}-${s}`}
-          className={`flex h-10 w-10 items-center justify-center rounded border ${color} ${
-            isActive ? "ring-2 ring-primary ring-offset-2" : ""
+          className={`flex h-8 w-8 items-center justify-center rounded border text-[10px] ${color} ${
+            isActive ? "ring-2 ring-primary ring-offset-1" : ""
           }`}
         >
-          {isActive && <div className="h-4 w-4 rounded-full bg-primary" />}
+          {isActive ? <div className="h-3 w-3 rounded-full bg-primary" /> : riskScore}
         </div>
       );
     }
@@ -89,11 +86,14 @@ function RiskMatrix({ probability, severity }: { probability: number; severity: 
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <div className="grid grid-cols-3 gap-1">{cells}</div>
-      <div className="flex justify-between w-full text-xs text-muted-foreground mt-1">
-        <span>Baixa</span>
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-muted-foreground writing-mode-vertical -rotate-180 [writing-mode:vertical-rl]">Impacto</span>
+        <div className="grid grid-cols-5 gap-1">{cells}</div>
+      </div>
+      <div className="flex justify-between w-full text-xs text-muted-foreground mt-1 pl-6">
+        <span>1</span>
         <span>Probabilidade</span>
-        <span>Alta</span>
+        <span>5</span>
       </div>
     </div>
   );
@@ -188,21 +188,22 @@ export function RiskViewDialog({
                 </p>
               </div>
               <div>
-                <Label className="text-muted-foreground">Probabilidade</Label>
-                <p className="font-medium">{risk.probability || 0} / 10</p>
+                <Label className="text-muted-foreground">Impacto (Severidade)</Label>
+                <p className="font-medium">{risk.severity || 0} / 5</p>
               </div>
               <div>
-                <Label className="text-muted-foreground">Severidade</Label>
-                <p className="font-medium">{risk.severity || 0} / 10</p>
+                <Label className="text-muted-foreground">Probabilidade</Label>
+                <p className="font-medium">{risk.probability || 0} / 5</p>
               </div>
               <div>
                 <Label className="text-muted-foreground">Detectabilidade</Label>
-                <p className="font-medium">{risk.detectability || 0} / 10</p>
+                <p className="font-medium">{risk.detectability || 0} / 5</p>
               </div>
               <div>
-                <Label className="text-muted-foreground">RPN</Label>
+                <Label className="text-muted-foreground">RPN (GAMP5)</Label>
                 <p className="font-medium">
                   {(risk.probability || 1) * (risk.severity || 1) * (risk.detectability || 1)}
+                  <span className="text-xs text-muted-foreground ml-1">/ 125</span>
                 </p>
               </div>
             </div>
@@ -421,28 +422,31 @@ export function RiskViewDialog({
               <div className="flex flex-col items-center gap-6">
                 <Card className="p-6">
                   <CardHeader className="p-0 pb-4">
-                    <CardTitle className="text-center text-lg">Matriz de Risco</CardTitle>
+                    <CardTitle className="text-center text-lg">Matriz de Risco GAMP5 (5×5)</CardTitle>
                   </CardHeader>
                   <CardContent className="p-0">
                     <RiskMatrix
-                      probability={risk.probability || 5}
-                      severity={risk.severity || 5}
+                      probability={Math.min(risk.probability || 3, 5)}
+                      severity={Math.min(risk.severity || 3, 5)}
                     />
                   </CardContent>
                 </Card>
                 <div className="flex gap-4 text-sm">
                   <div className="flex items-center gap-2">
-                    <div className="h-4 w-4 rounded bg-risk-low/20" />
-                    <span>Baixo</span>
+                    <div className="h-4 w-4 rounded bg-success/20 border" />
+                    <span>Baixo (1-7)</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="h-4 w-4 rounded bg-risk-medium/20" />
-                    <span>Médio</span>
+                    <div className="h-4 w-4 rounded bg-risk-medium/20 border" />
+                    <span>Médio (8-15)</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="h-4 w-4 rounded bg-risk-high/20" />
-                    <span>Alto</span>
+                    <div className="h-4 w-4 rounded bg-risk-high/20 border" />
+                    <span>Alto (16-25)</span>
                   </div>
+                </div>
+                <div className="text-xs text-muted-foreground text-center max-w-md">
+                  Metodologia GAMP5 2ª Edição - Avaliação baseada em Impacto GxP (segurança do paciente, qualidade do produto, integridade de dados) × Probabilidade de ocorrência
                 </div>
               </div>
             </TabsContent>
