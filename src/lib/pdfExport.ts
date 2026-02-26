@@ -603,3 +603,125 @@ export async function exportProjectToPDF(project: ProjectData, options?: ExportO
 
   pdf.save(filename);
 }
+
+// Systems Inventory PDF Export
+const gampLabels: Record<string, string> = {
+  "1": "Cat. 1 - Infraestrutura",
+  "3": "Cat. 3 - COTS",
+  "4": "Cat. 4 - Configurado",
+  "5": "Cat. 5 - Customizado",
+};
+
+const criticalityLabels: Record<string, string> = {
+  low: "Baixa",
+  medium: "Média",
+  high: "Alta",
+  critical: "Crítica",
+};
+
+const validationStatusLabelsInv: Record<string, string> = {
+  not_started: "Não Iniciado",
+  in_progress: "Em Andamento",
+  validated: "Validado",
+  expired: "Expirado",
+  pending_revalidation: "Revalidação Pendente",
+};
+
+const usageStatusLabelsInv: Record<string, string> = {
+  deploying: "Em Implantação",
+  in_use: "Em Uso",
+  retired: "Aposentado",
+};
+
+export function exportSystemsInventoryToPDF(systems: any[]): void {
+  const pdf = new jsPDF({
+    orientation: "landscape",
+    unit: "mm",
+    format: "a4",
+  });
+
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const margin = 15;
+
+  // Header
+  pdf.setFillColor(30, 64, 175);
+  pdf.rect(0, 0, pageWidth, 25, "F");
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFontSize(14);
+  pdf.setFont("helvetica", "bold");
+  pdf.text("Inventário de Sistemas Computadorizados", margin, 16);
+  pdf.setFontSize(8);
+  pdf.setFont("helvetica", "normal");
+  pdf.text(`Gerado em: ${new Date().toLocaleDateString("pt-BR")} ${new Date().toLocaleTimeString("pt-BR")}`, pageWidth - margin, 10, { align: "right" });
+  pdf.text(`Total: ${systems.length} sistema(s)`, pageWidth - margin, 16, { align: "right" });
+
+  // Table header
+  let y = 32;
+  const colWidths = [50, 35, 35, 25, 30, 35, 30, 28];
+  const headers = ["Sistema", "Fornecedor", "GAMP", "Criticidade", "Status Uso", "Status Validação", "GxP", "Interfaces"];
+
+  const drawTableHeader = () => {
+    pdf.setFillColor(241, 245, 249);
+    pdf.rect(margin, y, pageWidth - margin * 2, 8, "F");
+    pdf.setTextColor(71, 85, 105);
+    pdf.setFontSize(7);
+    pdf.setFont("helvetica", "bold");
+    let x = margin + 2;
+    headers.forEach((h, i) => {
+      pdf.text(h, x, y + 5.5);
+      x += colWidths[i];
+    });
+    y += 10;
+  };
+
+  drawTableHeader();
+
+  pdf.setTextColor(0, 0, 0);
+  pdf.setFontSize(7);
+  pdf.setFont("helvetica", "normal");
+
+  systems.forEach((system) => {
+    if (y > pageHeight - 20) {
+      pdf.addPage();
+      y = 15;
+      drawTableHeader();
+      pdf.setTextColor(0, 0, 0);
+      pdf.setFontSize(7);
+      pdf.setFont("helvetica", "normal");
+    }
+
+    let x = margin + 2;
+    const row = [
+      system.name?.substring(0, 25) || "-",
+      system.vendor?.substring(0, 18) || "-",
+      gampLabels[system.gamp_category] || system.gamp_category,
+      criticalityLabels[system.criticality || "medium"],
+      usageStatusLabelsInv[system.usage_status || "in_use"],
+      validationStatusLabelsInv[system.validation_status || "not_started"],
+      system.gxp_impact ? "Sim" : "Não",
+      system.has_interfaces ? "Sim" : "Não",
+    ];
+
+    row.forEach((cell, i) => {
+      pdf.text(cell, x, y + 4);
+      x += colWidths[i];
+    });
+
+    // Row border
+    pdf.setDrawColor(226, 232, 240);
+    pdf.line(margin, y + 7, pageWidth - margin, y + 7);
+    y += 8;
+  });
+
+  // Footer
+  const totalPages = pdf.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    pdf.setPage(i);
+    pdf.setFontSize(7);
+    pdf.setTextColor(128, 128, 128);
+    pdf.text(`Página ${i} de ${totalPages}`, pageWidth / 2, pageHeight - 8, { align: "center" });
+  }
+
+  pdf.save(`Inventario_Sistemas_${new Date().toISOString().slice(0, 10)}.pdf`);
+}

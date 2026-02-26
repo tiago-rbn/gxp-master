@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, Trash2, Loader2, Upload, AlertTriangle, CheckCircle, ShieldAlert } from "lucide-react";
+import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, Trash2, Loader2, Upload, AlertTriangle, CheckCircle, ShieldAlert, FileDown } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { GampBadge } from "@/components/shared/GampBadge";
@@ -42,6 +42,7 @@ import { DeleteSystemDialog } from "@/components/systems/DeleteSystemDialog";
 import { ImportSystemsDialog, ParsedSystem } from "@/components/systems/ImportSystemsDialog";
 import type { Database } from "@/integrations/supabase/types";
 import { toast } from "sonner";
+import { exportSystemsInventoryToPDF } from "@/lib/pdfExport";
 import { useNavigate } from "react-router-dom";
 
 type System = Database["public"]["Tables"]["systems"]["Row"] & {
@@ -231,6 +232,14 @@ export default function Systems() {
         <Button variant="outline" onClick={() => setIsImportOpen(true)}>
           <Upload className="mr-2 h-4 w-4" />
           Importar CSV
+        </Button>
+        <Button 
+          variant="outline" 
+          onClick={() => exportSystemsInventoryToPDF(filteredSystems)}
+          disabled={filteredSystems.length === 0}
+        >
+          <FileDown className="mr-2 h-4 w-4" />
+          Exportar PDF
         </Button>
       </div>
 

@@ -46,6 +46,8 @@ const systemSchema = z.object({
   criticality: z.enum(["low", "medium", "high", "critical"]).optional(),
   gxp_impact: z.boolean().optional(),
   data_integrity_impact: z.boolean().optional(),
+  has_interfaces: z.boolean().optional(),
+  usage_status: z.enum(["deploying", "in_use", "retired"]).optional(),
   validation_status: z.enum(["not_started", "in_progress", "validated", "expired", "pending_revalidation"]).optional(),
   responsible_id: z.string().optional(),
   system_owner_id: z.string().optional(),
@@ -85,6 +87,8 @@ export function SystemFormDialog({
       criticality: "medium",
       gxp_impact: false,
       data_integrity_impact: false,
+      has_interfaces: false,
+      usage_status: "in_use",
       validation_status: "not_started",
       responsible_id: "",
       system_owner_id: "",
@@ -106,6 +110,8 @@ export function SystemFormDialog({
         criticality: (system.criticality as "low" | "medium" | "high" | "critical") || "medium",
         gxp_impact: system.gxp_impact || false,
         data_integrity_impact: system.data_integrity_impact || false,
+        has_interfaces: (system as any).has_interfaces || false,
+        usage_status: ((system as any).usage_status as "deploying" | "in_use" | "retired") || "in_use",
         validation_status: (system.validation_status as "not_started" | "in_progress" | "validated" | "expired" | "pending_revalidation") || "not_started",
         responsible_id: system.responsible_id || "",
         system_owner_id: system.system_owner_id || "",
@@ -124,6 +130,8 @@ export function SystemFormDialog({
         criticality: "medium",
         gxp_impact: false,
         data_integrity_impact: false,
+        has_interfaces: false,
+        usage_status: "in_use",
         validation_status: "not_started",
         responsible_id: "",
         system_owner_id: "",
@@ -344,6 +352,29 @@ export function SystemFormDialog({
 
               <FormField
                 control={form.control}
+                name="usage_status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status de Uso</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o status de uso" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="deploying">Em Implantação</SelectItem>
+                        <SelectItem value="in_use">Em Uso</SelectItem>
+                        <SelectItem value="retired">Aposentado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
                 name="installation_location"
                 render={({ field }) => (
                   <FormItem>
@@ -434,6 +465,19 @@ export function SystemFormDialog({
                       <Switch checked={field.value} onCheckedChange={field.onChange} />
                     </FormControl>
                     <FormLabel className="cursor-pointer">Integridade de Dados</FormLabel>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="has_interfaces"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-2 space-y-0">
+                    <FormControl>
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                    <FormLabel className="cursor-pointer">Interface com Outros Sistemas</FormLabel>
                   </FormItem>
                 )}
               />
