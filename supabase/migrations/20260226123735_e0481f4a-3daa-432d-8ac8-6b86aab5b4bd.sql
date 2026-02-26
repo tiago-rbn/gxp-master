@@ -1,0 +1,1 @@
+ALTER TABLE public.risk_assessments ADD COLUMN questionnaire_responses jsonb DEFAULT '[]'::jsonb;

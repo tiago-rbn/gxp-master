@@ -883,6 +883,7 @@ export type Database = {
           detectability: number | null
           id: string
           probability: number | null
+          questionnaire_responses: Json | null
           residual_risk: Database["public"]["Enums"]["risk_level"] | null
           reviewed_at: string | null
           reviewer_id: string | null
@@ -906,6 +907,7 @@ export type Database = {
           detectability?: number | null
           id?: string
           probability?: number | null
+          questionnaire_responses?: Json | null
           residual_risk?: Database["public"]["Enums"]["risk_level"] | null
           reviewed_at?: string | null
           reviewer_id?: string | null
@@ -929,6 +931,7 @@ export type Database = {
           detectability?: number | null
           id?: string
           probability?: number | null
+          questionnaire_responses?: Json | null
           residual_risk?: Database["public"]["Enums"]["risk_level"] | null
           reviewed_at?: string | null
           reviewer_id?: string | null
