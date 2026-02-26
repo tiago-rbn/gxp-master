@@ -633,7 +633,7 @@ const usageStatusLabelsInv: Record<string, string> = {
   retired: "Aposentado",
 };
 
-export function exportSystemsInventoryToPDF(systems: any[]): void {
+export function exportSystemsInventoryToPDF(systems: any[], options?: { companyName?: string | null; userName?: string | null }): void {
   const pdf = new jsPDF({
     orientation: "landscape",
     unit: "mm",
@@ -650,7 +650,15 @@ export function exportSystemsInventoryToPDF(systems: any[]): void {
   pdf.setTextColor(255, 255, 255);
   pdf.setFontSize(14);
   pdf.setFont("helvetica", "bold");
-  pdf.text("Inventário de Sistemas Computadorizados", margin, 16);
+  pdf.text("Inventário de Sistemas Computadorizados", margin, 12);
+  
+  // Company name in header
+  if (options?.companyName) {
+    pdf.setFontSize(10);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(options.companyName, margin, 20);
+  }
+  
   pdf.setFontSize(8);
   pdf.setFont("helvetica", "normal");
   pdf.text(`Gerado em: ${new Date().toLocaleDateString("pt-BR")} ${new Date().toLocaleTimeString("pt-BR")}`, pageWidth - margin, 10, { align: "right" });
@@ -720,7 +728,12 @@ export function exportSystemsInventoryToPDF(systems: any[]): void {
     pdf.setPage(i);
     pdf.setFontSize(7);
     pdf.setTextColor(128, 128, 128);
-    pdf.text(`Página ${i} de ${totalPages}`, pageWidth / 2, pageHeight - 8, { align: "center" });
+    
+    const footerLeft = options?.userName 
+      ? `Gerado por: ${options.userName}` 
+      : "Documento gerado automaticamente";
+    pdf.text(footerLeft, margin, pageHeight - 8);
+    pdf.text(`Página ${i} de ${totalPages}`, pageWidth - margin, pageHeight - 8, { align: "right" });
   }
 
   pdf.save(`Inventario_Sistemas_${new Date().toISOString().slice(0, 10)}.pdf`);

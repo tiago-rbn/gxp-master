@@ -44,6 +44,9 @@ import type { Database } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import { exportSystemsInventoryToPDF } from "@/lib/pdfExport";
 import { useNavigate } from "react-router-dom";
+import { useUserCompanies } from "@/hooks/useUserCompanies";
+import { useAuth } from "@/contexts/AuthContext";
+import { useProfiles } from "@/hooks/useProfiles";
 
 type System = Database["public"]["Tables"]["systems"]["Row"] & {
   responsible?: { full_name: string } | null;
@@ -102,6 +105,10 @@ export default function Systems() {
   const [selectedSystem, setSelectedSystem] = useState<System | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const navigate = useNavigate();
+  const { activeCompany } = useUserCompanies();
+  const { user } = useAuth();
+  const { profiles } = useProfiles();
+  const currentUserProfile = profiles?.find(p => p.id === user?.id);
 
   const { systems, isLoading: isLoadingSystems, createSystem, updateSystem, deleteSystem } = useSystems();
   const { data: systemsWithIRA = [], isLoading: isLoadingIRA } = useSystemsWithIRAStatus();
@@ -235,7 +242,10 @@ export default function Systems() {
         </Button>
         <Button 
           variant="outline" 
-          onClick={() => exportSystemsInventoryToPDF(filteredSystems)}
+          onClick={() => exportSystemsInventoryToPDF(filteredSystems, {
+            companyName: activeCompany?.name || null,
+            userName: currentUserProfile?.full_name || user?.email || null,
+          })}
           disabled={filteredSystems.length === 0}
         >
           <FileDown className="mr-2 h-4 w-4" />
