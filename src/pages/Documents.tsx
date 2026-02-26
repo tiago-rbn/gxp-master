@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Plus, Search, Filter, FileText, Eye, Download, Edit, Trash2, MoreHorizontal, Loader2, Sparkles, Wand2 } from "lucide-react";
+import { Plus, Search, Filter, FileText, Eye, Download, Edit, Trash2, MoreHorizontal, Loader2, Sparkles, Wand2, ClipboardList } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -33,6 +34,7 @@ import { DocumentViewDialog } from "@/components/documents/DocumentViewDialog";
 import { DeleteDocumentDialog } from "@/components/documents/DeleteDocumentDialog";
 import { AIDocumentDialog } from "@/components/documents/AIDocumentDialog";
 import { GenerateFromTemplateDialog } from "@/components/documents/GenerateFromTemplateDialog";
+import { RequirementsTab } from "@/components/requirements/RequirementsTab";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { useDocumentTypes, defaultDocumentTypes } from "@/hooks/useDocumentTypes";
@@ -53,6 +55,7 @@ const statusLabels: Record<string, string> = {
 };
 
 export default function Documents() {
+  const [activeTab, setActiveTab] = useState("documents");
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -151,7 +154,6 @@ export default function Documents() {
     }
   };
 
-  // Count documents by type
   const typeCounts = documents.reduce((acc, doc) => {
     acc[doc.document_type] = (acc[doc.document_type] || 0) + 1;
     return acc;
@@ -161,201 +163,197 @@ export default function Documents() {
     <AppLayout>
       <PageHeader
         title="Documentação"
-        description="Biblioteca de documentos de validação"
-        action={{
-          label: "Novo Documento",
-          icon: Plus,
-          onClick: handleCreate,
-        }}
-      >
-        <Button variant="outline" onClick={() => setIsTemplateDialogOpen(true)}>
-          <Wand2 className="mr-2 h-4 w-4" />
-          Gerar de Template
-        </Button>
-        <Button variant="outline" onClick={() => setIsAIDialogOpen(true)}>
-          <Sparkles className="mr-2 h-4 w-4" />
-          Gerar com IA
-        </Button>
-      </PageHeader>
+        description="Biblioteca de documentos de validação e requisitos"
+      />
 
-      {/* Document Type Tabs */}
-      <div className="mb-6 flex flex-wrap gap-2">
-        <Badge
-          variant="outline"
-          className={`cursor-pointer ${typeFilter === "all" ? "bg-primary text-primary-foreground" : ""}`}
-          onClick={() => setTypeFilter("all")}
-        >
-          Todos ({documents.length})
-        </Badge>
-        {(documentTypes || defaultDocumentTypes).map((type) => {
-          const count = typeCounts[type.code] || 0;
-          return (
-            <Badge
-              key={type.code}
-              variant="outline"
-              className={`cursor-pointer ${typeFilter === type.code ? "bg-primary text-primary-foreground" : documentTypeColors[type.code]}`}
-              onClick={() => setTypeFilter(type.code)}
-            >
-              {type.code} ({count})
-            </Badge>
-          );
-        })}
-      </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="documents" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Documentos
+          </TabsTrigger>
+          <TabsTrigger value="requirements" className="flex items-center gap-2">
+            <ClipboardList className="h-4 w-4" />
+            Requisitos
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Filters */}
-      <Card className="mb-6">
-        <CardContent className="p-4">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nome ou sistema..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[160px]">
-                <Filter className="mr-2 h-4 w-4" />
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos Status</SelectItem>
-                <SelectItem value="draft">Rascunho</SelectItem>
-                <SelectItem value="pending">Em Revisão</SelectItem>
-                <SelectItem value="approved">Aprovado</SelectItem>
-                <SelectItem value="rejected">Rejeitado</SelectItem>
-              </SelectContent>
-            </Select>
+        <TabsContent value="documents" className="space-y-6">
+          {/* Action buttons */}
+          <div className="flex items-center gap-2 justify-end">
+            <Button variant="outline" onClick={() => setIsTemplateDialogOpen(true)}>
+              <Wand2 className="mr-2 h-4 w-4" />
+              Gerar de Template
+            </Button>
+            <Button variant="outline" onClick={() => setIsAIDialogOpen(true)}>
+              <Sparkles className="mr-2 h-4 w-4" />
+              Gerar com IA
+            </Button>
+            <Button onClick={handleCreate}>
+              <Plus className="mr-2 h-4 w-4" />
+              Novo Documento
+            </Button>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Documents Table */}
-      <Card>
-        <CardContent className="p-0">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : filteredDocuments.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground mb-4">
-                {documents.length === 0
-                  ? "Nenhum documento cadastrado ainda."
-                  : "Nenhum documento encontrado com os filtros aplicados."}
-              </p>
-              {documents.length === 0 && (
-                <Button onClick={handleCreate}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Criar Primeiro Documento
-                </Button>
+          {/* Document Type Tabs */}
+          <div className="flex flex-wrap gap-2">
+            <Badge
+              variant="outline"
+              className={`cursor-pointer ${typeFilter === "all" ? "bg-primary text-primary-foreground" : ""}`}
+              onClick={() => setTypeFilter("all")}
+            >
+              Todos ({documents.length})
+            </Badge>
+            {(documentTypes || defaultDocumentTypes).map((type) => {
+              const count = typeCounts[type.code] || 0;
+              return (
+                <Badge
+                  key={type.code}
+                  variant="outline"
+                  className={`cursor-pointer ${typeFilter === type.code ? "bg-primary text-primary-foreground" : documentTypeColors[type.code]}`}
+                  onClick={() => setTypeFilter(type.code)}
+                >
+                  {type.code} ({count})
+                </Badge>
+              );
+            })}
+          </div>
+
+          {/* Filters */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por nome ou sistema..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[160px]">
+                    <Filter className="mr-2 h-4 w-4" />
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos Status</SelectItem>
+                    <SelectItem value="draft">Rascunho</SelectItem>
+                    <SelectItem value="pending">Em Revisão</SelectItem>
+                    <SelectItem value="approved">Aprovado</SelectItem>
+                    <SelectItem value="rejected">Rejeitado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Documents Table */}
+          <Card>
+            <CardContent className="p-0">
+              {isLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : filteredDocuments.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground mb-4">
+                    {documents.length === 0
+                      ? "Nenhum documento cadastrado ainda."
+                      : "Nenhum documento encontrado com os filtros aplicados."}
+                  </p>
+                  {documents.length === 0 && (
+                    <Button onClick={handleCreate}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Criar Primeiro Documento
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Documento</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Sistema</TableHead>
+                      <TableHead>Versão</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Autor</TableHead>
+                      <TableHead>Atualizado em</TableHead>
+                      <TableHead className="w-[50px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredDocuments.map((doc) => (
+                      <TableRow
+                        key={doc.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => handleView(doc)}
+                      >
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium">{doc.title}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={documentTypeColors[doc.document_type] || ""}>
+                            {doc.document_type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{doc.system?.name || "-"}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">v{doc.version || "1.0"}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {statusLabels[doc.status || "draft"]}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{doc.author?.full_name || "-"}</TableCell>
+                        <TableCell>
+                          {new Date(doc.updated_at).toLocaleDateString("pt-BR")}
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleView(doc); }}>
+                                <Eye className="mr-2 h-4 w-4" /> Visualizar
+                              </DropdownMenuItem>
+                              {doc.file_url && (
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDownload(doc); }}>
+                                  <Download className="mr-2 h-4 w-4" /> Download
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(doc); }}>
+                                <Edit className="mr-2 h-4 w-4" /> Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(doc); }}>
+                                <Trash2 className="mr-2 h-4 w-4" /> Excluir
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               )}
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Documento</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Sistema</TableHead>
-                  <TableHead>Versão</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Autor</TableHead>
-                  <TableHead>Atualizado em</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredDocuments.map((doc) => (
-                  <TableRow
-                    key={doc.id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => handleView(doc)}
-                  >
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">{doc.title}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={documentTypeColors[doc.document_type] || ""}>
-                        {doc.document_type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{doc.system?.name || "-"}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">v{doc.version || "1.0"}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {statusLabels[doc.status || "draft"]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{doc.author?.full_name || "-"}</TableCell>
-                    <TableCell>
-                      {new Date(doc.updated_at).toLocaleDateString("pt-BR")}
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleView(doc);
-                            }}
-                          >
-                            <Eye className="mr-2 h-4 w-4" />
-                            Visualizar
-                          </DropdownMenuItem>
-                          {doc.file_url && (
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDownload(doc);
-                              }}
-                            >
-                              <Download className="mr-2 h-4 w-4" />
-                              Download
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEdit(doc);
-                            }}
-                          >
-                            <Edit className="mr-2 h-4 w-4" />
-                            Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDelete(doc);
-                            }}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Excluir
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="requirements">
+          <RequirementsTab />
+        </TabsContent>
+      </Tabs>
 
       {/* Dialogs */}
       <DocumentFormDialog
