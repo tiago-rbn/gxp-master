@@ -1310,6 +1310,76 @@ export type Database = {
           },
         ]
       }
+      system_version_history: {
+        Row: {
+          change_description: string
+          change_request_created: boolean | null
+          change_request_id: string | null
+          changed_by: string | null
+          company_id: string
+          created_at: string
+          has_bpx_impact: boolean | null
+          id: string
+          ira_review_requested: boolean | null
+          new_version: string
+          previous_version: string | null
+          system_id: string
+          update_date: string
+        }
+        Insert: {
+          change_description: string
+          change_request_created?: boolean | null
+          change_request_id?: string | null
+          changed_by?: string | null
+          company_id: string
+          created_at?: string
+          has_bpx_impact?: boolean | null
+          id?: string
+          ira_review_requested?: boolean | null
+          new_version: string
+          previous_version?: string | null
+          system_id: string
+          update_date?: string
+        }
+        Update: {
+          change_description?: string
+          change_request_created?: boolean | null
+          change_request_id?: string | null
+          changed_by?: string | null
+          company_id?: string
+          created_at?: string
+          has_bpx_impact?: boolean | null
+          id?: string
+          ira_review_requested?: boolean | null
+          new_version?: string
+          previous_version?: string | null
+          system_id?: string
+          update_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_version_history_change_request_id_fkey"
+            columns: ["change_request_id"]
+            isOneToOne: false
+            referencedRelation: "change_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_version_history_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_version_history_system_id_fkey"
+            columns: ["system_id"]
+            isOneToOne: false
+            referencedRelation: "systems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       systems: {
         Row: {
           bpx_relevant: boolean | null
