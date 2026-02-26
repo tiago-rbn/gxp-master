@@ -1027,6 +1027,117 @@ export type Database = {
           },
         ]
       }
+      risk_template_items: {
+        Row: {
+          company_id: string
+          controls: string | null
+          created_at: string
+          description: string | null
+          detectability: number | null
+          id: string
+          package_id: string
+          probability: number | null
+          severity: number | null
+          sort_order: number | null
+          tags: string[] | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          controls?: string | null
+          created_at?: string
+          description?: string | null
+          detectability?: number | null
+          id?: string
+          package_id: string
+          probability?: number | null
+          severity?: number | null
+          sort_order?: number | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          controls?: string | null
+          created_at?: string
+          description?: string | null
+          detectability?: number | null
+          id?: string
+          package_id?: string
+          probability?: number | null
+          severity?: number | null
+          sort_order?: number | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_template_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_template_items_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "risk_template_packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      risk_template_packages: {
+        Row: {
+          category: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_template_packages_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_template_packages_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       risk_test_case_links: {
         Row: {
           company_id: string
