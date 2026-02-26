@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Search, Eye, Edit, Trash2, Loader2, ChevronDown, ChevronRight, FolderOpen, AlertTriangle } from "lucide-react";
+import { Plus, Search, Eye, Edit, Trash2, Loader2, ChevronDown, ChevronRight, FolderOpen, AlertTriangle, Package } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ interface FRAGroupedTabProps {
   onEdit: (risk: any) => void;
   onDelete: (risk: any) => void;
   onCreate: () => void;
+  onLoadTemplate: () => void;
 }
 
 const riskLevelToOldFormat: Record<string, "High" | "Medium" | "Low"> = {
@@ -34,7 +35,7 @@ const statusLabels: Record<string, string> = {
   rejected: "Rejeitado", completed: "Concluído", cancelled: "Cancelado",
 };
 
-export function FRAGroupedTab({ risks, isLoading, onView, onEdit, onDelete, onCreate }: FRAGroupedTabProps) {
+export function FRAGroupedTab({ risks, isLoading, onView, onEdit, onDelete, onCreate, onLoadTemplate }: FRAGroupedTabProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedSystems, setExpandedSystems] = useState<Set<string>>(new Set(["no-system"]));
 
@@ -84,6 +85,10 @@ export function FRAGroupedTab({ risks, isLoading, onView, onEdit, onDelete, onCr
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={expandAll}>Expandir Todos</Button>
+              <Button variant="outline" onClick={onLoadTemplate}>
+                <Package className="mr-2 h-4 w-4" />
+                Carregar Template
+              </Button>
               <Button onClick={onCreate}>
                 <Plus className="mr-2 h-4 w-4" />
                 Nova FRA

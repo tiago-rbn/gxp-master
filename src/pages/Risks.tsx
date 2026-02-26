@@ -14,6 +14,7 @@ import { FRAGroupedTab } from "@/components/risks/FRAGroupedTab";
 import { RiskFormDialog } from "@/components/risks/RiskFormDialog";
 import { RiskViewDialog } from "@/components/risks/RiskViewDialog";
 import { DeleteRiskDialog } from "@/components/risks/DeleteRiskDialog";
+import { LoadFromTemplateDialog } from "@/components/risks/LoadFromTemplateDialog";
 import type { Database } from "@/integrations/supabase/types";
 
 type RiskAssessment = Database["public"]["Tables"]["risk_assessments"]["Row"] & {
@@ -32,6 +33,7 @@ export default function Risks() {
   const [isIRAViewOpen, setIsIRAViewOpen] = useState(false);
   const [isFRAViewOpen, setIsFRAViewOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isLoadTemplateOpen, setIsLoadTemplateOpen] = useState(false);
   const [selectedRisk, setSelectedRisk] = useState<RiskAssessment | null>(null);
   const [prefilledSystemId, setPrefilledSystemId] = useState<string | null>(null);
   const [prefilledSystemName, setPrefilledSystemName] = useState<string | null>(null);
@@ -245,6 +247,7 @@ export default function Risks() {
             onEdit={handleEdit}
             onDelete={handleDelete}
             onCreate={handleFRACreate}
+            onLoadTemplate={() => setIsLoadTemplateOpen(true)}
           />
         </TabsContent>
       </Tabs>
@@ -293,6 +296,11 @@ export default function Risks() {
         riskTitle={selectedRisk?.title || ""}
         onConfirm={handleConfirmDelete}
         isLoading={deleteRiskAssessment.isPending}
+      />
+
+      <LoadFromTemplateDialog
+        open={isLoadTemplateOpen}
+        onOpenChange={setIsLoadTemplateOpen}
       />
     </AppLayout>
   );
