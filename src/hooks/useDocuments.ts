@@ -34,7 +34,8 @@ export function useDocuments() {
           *,
           system:systems(name),
           author:profiles!documents_author_id_fkey(full_name),
-          approver:profiles!documents_approved_by_fkey(full_name)
+          approver:profiles!documents_approved_by_fkey(full_name),
+          project:validation_projects(id, name)
         `)
         .order("created_at", { ascending: false });
 
