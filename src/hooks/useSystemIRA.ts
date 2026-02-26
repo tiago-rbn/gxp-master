@@ -87,15 +87,17 @@ export function calculateRiskScore(probability: number, severity: number, detect
 }
 
 export function getRiskScoreLevel(score: number): "low" | "medium" | "high" | "critical" {
-  if (score >= 500) return "critical";
-  if (score >= 200) return "high";
-  if (score >= 50) return "medium";
+  // GAMP5 scale: 1-5 for each factor, RPN range: 1-125
+  if (score >= 80) return "critical";
+  if (score >= 40) return "high";
+  if (score >= 15) return "medium";
   return "low";
 }
 
 export function getRiskScoreColor(score: number): string {
-  if (score >= 500) return "text-destructive font-bold";
-  if (score >= 200) return "text-destructive";
-  if (score >= 50) return "text-warning";
+  // GAMP5 scale thresholds
+  if (score >= 80) return "text-destructive font-bold";
+  if (score >= 40) return "text-destructive";
+  if (score >= 15) return "text-warning";
   return "text-success";
 }

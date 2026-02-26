@@ -41,14 +41,39 @@ type RiskAssessment = Database["public"]["Tables"]["risk_assessments"]["Row"] & 
   tags?: string[];
 };
 
+// GAMP5 scale labels
+const gamp5SeverityLabels: Record<number, string> = {
+  1: "Negligível - Sem impacto GxP",
+  2: "Menor - Impacto mínimo, facilmente corrigível",
+  3: "Moderado - Impacto moderado na qualidade/integridade",
+  4: "Maior - Impacto significativo na qualidade ou segurança",
+  5: "Crítico - Impacto direto na segurança do paciente",
+};
+
+const gamp5ProbabilityLabels: Record<number, string> = {
+  1: "Rara - Muito improvável de ocorrer",
+  2: "Baixa - Improvável, mas possível",
+  3: "Moderada - Possível de ocorrer",
+  4: "Alta - Provável de ocorrer",
+  5: "Muito Alta - Quase certa",
+};
+
+const gamp5DetectabilityLabels: Record<number, string> = {
+  1: "Muito Alta - Detectado automaticamente",
+  2: "Alta - Detectado em testes de rotina",
+  3: "Moderada - Detectado por inspeção",
+  4: "Baixa - Difícil de detectar",
+  5: "Muito Baixa - Praticamente indetectável",
+};
+
 const riskSchema = z.object({
   title: z.string().min(1, "Título é obrigatório"),
   description: z.string().optional(),
   assessment_type: z.string().min(1, "Tipo é obrigatório"),
   system_id: z.string().optional(),
-  probability: z.number().min(1).max(10),
-  severity: z.number().min(1).max(10),
-  detectability: z.number().min(1).max(10),
+  probability: z.number().min(1).max(5),
+  severity: z.number().min(1).max(5),
+  detectability: z.number().min(1).max(5),
   risk_level: z.enum(["low", "medium", "high", "critical"]),
   residual_risk: z.enum(["low", "medium", "high", "critical"]).optional(),
   controls: z.string().optional(),
@@ -73,9 +98,10 @@ interface RiskFormDialogProps {
 
 function calculateRiskLevel(probability: number, severity: number, detectability: number): "low" | "medium" | "high" | "critical" {
   const rpn = probability * severity * detectability;
-  if (rpn >= 500) return "critical";
-  if (rpn >= 200) return "high";
-  if (rpn >= 50) return "medium";
+  // GAMP5 scale: 1-5 for each factor, RPN range: 1-125
+  if (rpn >= 80) return "critical";
+  if (rpn >= 40) return "high";
+  if (rpn >= 15) return "medium";
   return "low";
 }
 
@@ -103,9 +129,9 @@ export function RiskFormDialog({
       description: "",
       assessment_type: "IRA",
       system_id: "",
-      probability: 5,
-      severity: 5,
-      detectability: 5,
+      probability: 3,
+      severity: 3,
+      detectability: 3,
       risk_level: "medium",
       residual_risk: "low",
       controls: "",
@@ -135,9 +161,9 @@ export function RiskFormDialog({
         description: risk.description || "",
         assessment_type: risk.assessment_type,
         system_id: risk.system_id || "",
-        probability: risk.probability || 5,
-        severity: risk.severity || 5,
-        detectability: risk.detectability || 5,
+        probability: Math.min(risk.probability || 3, 5),
+        severity: Math.min(risk.severity || 3, 5),
+        detectability: Math.min(risk.detectability || 3, 5),
         risk_level: (risk.risk_level as "low" | "medium" | "high" | "critical") || "medium",
         residual_risk: (risk.residual_risk as "low" | "medium" | "high" | "critical") || "low",
         controls: risk.controls || "",
@@ -160,9 +186,9 @@ export function RiskFormDialog({
         description: "",
         assessment_type: "IRA",
         system_id: systemId,
-        probability: 5,
-        severity: 5,
-        detectability: 5,
+        probability: 3,
+        severity: 3,
+        detectability: 3,
         risk_level: "medium",
         residual_risk: "low",
         controls: "",
@@ -448,10 +474,13 @@ export function RiskFormDialog({
               )}
             />
 
-            {/* Risk Factors */}
+            {/* GAMP5 Risk Factors */}
             <div className="space-y-4 rounded-lg border p-4">
               <div className="flex items-center justify-between">
-                <h4 className="font-medium">Fatores de Risco (RPN)</h4>
+                <div>
+                  <h4 className="font-medium">Avaliação de Risco GAMP5</h4>
+                  <p className="text-xs text-muted-foreground">Escala de 1 a 5 conforme metodologia GAMP5 2ª Edição</p>
+                </div>
                 <div className="text-sm">
                   Nível calculado: <span className={currentRiskLevel.className}>{currentRiskLevel.label}</span>
                 </div>
@@ -459,22 +488,23 @@ export function RiskFormDialog({
 
               <FormField
                 control={form.control}
-                name="probability"
+                name="severity"
                 render={({ field }) => (
                   <FormItem>
                     <div className="flex justify-between">
-                      <FormLabel>Probabilidade</FormLabel>
-                      <span className="text-sm text-muted-foreground">{field.value}/10</span>
+                      <FormLabel>Impacto (Severidade)</FormLabel>
+                      <span className="text-sm font-medium text-muted-foreground">{field.value}/5</span>
                     </div>
                     <FormControl>
                       <Slider
                         min={1}
-                        max={10}
+                        max={5}
                         step={1}
                         value={[field.value]}
                         onValueChange={(value) => field.onChange(value[0])}
                       />
                     </FormControl>
+                    <p className="text-xs text-muted-foreground">{gamp5SeverityLabels[field.value]}</p>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -482,22 +512,23 @@ export function RiskFormDialog({
 
               <FormField
                 control={form.control}
-                name="severity"
+                name="probability"
                 render={({ field }) => (
                   <FormItem>
                     <div className="flex justify-between">
-                      <FormLabel>Severidade</FormLabel>
-                      <span className="text-sm text-muted-foreground">{field.value}/10</span>
+                      <FormLabel>Probabilidade de Ocorrência</FormLabel>
+                      <span className="text-sm font-medium text-muted-foreground">{field.value}/5</span>
                     </div>
                     <FormControl>
                       <Slider
                         min={1}
-                        max={10}
+                        max={5}
                         step={1}
                         value={[field.value]}
                         onValueChange={(value) => field.onChange(value[0])}
                       />
                     </FormControl>
+                    <p className="text-xs text-muted-foreground">{gamp5ProbabilityLabels[field.value]}</p>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -510,24 +541,30 @@ export function RiskFormDialog({
                   <FormItem>
                     <div className="flex justify-between">
                       <FormLabel>Detectabilidade</FormLabel>
-                      <span className="text-sm text-muted-foreground">{field.value}/10</span>
+                      <span className="text-sm font-medium text-muted-foreground">{field.value}/5</span>
                     </div>
                     <FormControl>
                       <Slider
                         min={1}
-                        max={10}
+                        max={5}
                         step={1}
                         value={[field.value]}
                         onValueChange={(value) => field.onChange(value[0])}
                       />
                     </FormControl>
+                    <p className="text-xs text-muted-foreground">{gamp5DetectabilityLabels[field.value]}</p>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <div className="text-sm text-muted-foreground">
-                RPN (Risk Priority Number) = {probability} × {severity} × {detectability} = {probability * severity * detectability}
+              <div className="rounded-md bg-muted p-3 space-y-1">
+                <div className="text-sm font-medium">
+                  RPN = {severity} × {probability} × {detectability} = <span className={currentRiskLevel.className}>{severity * probability * detectability}</span>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Classificação GAMP5: Baixo (1-14) · Médio (15-39) · Alto (40-79) · Crítico (80-125)
+                </div>
               </div>
             </div>
 
