@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Search, Filter, FileText, Eye, Download, Edit, Trash2, MoreHorizontal, Loader2, Sparkles, Wand2, ClipboardList } from "lucide-react";
+import { Plus, Search, Filter, FileText, Eye, Download, Edit, Trash2, MoreHorizontal, Loader2, Sparkles, Wand2, ClipboardList, FlaskConical, Shield, BookOpen, Paperclip } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,25 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useDocuments } from "@/hooks/useDocuments";
 import { DocumentFormDialog } from "@/components/documents/DocumentFormDialog";
@@ -35,6 +23,10 @@ import { DeleteDocumentDialog } from "@/components/documents/DeleteDocumentDialo
 import { AIDocumentDialog } from "@/components/documents/AIDocumentDialog";
 import { GenerateFromTemplateDialog } from "@/components/documents/GenerateFromTemplateDialog";
 import { RequirementsTab } from "@/components/requirements/RequirementsTab";
+import { TestCasesTab } from "@/components/testcases/TestCasesTab";
+import { TestEvidenceTab } from "@/components/testcases/TestEvidenceTab";
+import { ProtocolsTab } from "@/components/documents/ProtocolsTab";
+import { SOPsTab } from "@/components/documents/SOPsTab";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { useDocumentTypes, defaultDocumentTypes } from "@/hooks/useDocumentTypes";
@@ -46,12 +38,7 @@ type Document = Database["public"]["Tables"]["documents"]["Row"] & {
 };
 
 const statusLabels: Record<string, string> = {
-  draft: "Rascunho",
-  pending: "Em Revisão",
-  approved: "Aprovado",
-  rejected: "Rejeitado",
-  completed: "Concluído",
-  cancelled: "Cancelado",
+  draft: "Rascunho", pending: "Em Revisão", approved: "Aprovado", rejected: "Rejeitado", completed: "Concluído", cancelled: "Cancelado",
 };
 
 export default function Documents() {
@@ -68,76 +55,40 @@ export default function Documents() {
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [aiGeneratedContent, setAiGeneratedContent] = useState<{ content: string; type: string } | null>(null);
 
-  const { documents, isLoading, stats, createDocument, updateDocument, deleteDocument } =
-    useDocuments();
+  const { documents, isLoading, createDocument, updateDocument, deleteDocument } = useDocuments();
   const { documentTypes } = useDocumentTypes();
 
   const documentTypeColors = (documentTypes || defaultDocumentTypes).reduce(
-    (acc, type) => {
-      acc[type.code] = type.color || "bg-muted text-muted-foreground border-transparent";
-      return acc;
-    },
+    (acc, type) => { acc[type.code] = type.color || "bg-muted text-muted-foreground border-transparent"; return acc; },
     {} as Record<string, string>
   );
 
   const filteredDocuments = documents.filter((doc) => {
-    const matchesSearch =
-      doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (doc.system?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
+    const matchesSearch = doc.title.toLowerCase().includes(searchTerm.toLowerCase()) || (doc.system?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
     const matchesType = typeFilter === "all" || doc.document_type === typeFilter;
     const matchesStatus = statusFilter === "all" || doc.status === statusFilter;
     return matchesSearch && matchesType && matchesStatus;
   });
 
-  const handleCreate = () => {
-    setSelectedDocument(null);
-    setIsFormOpen(true);
-  };
-
-  const handleView = (doc: Document) => {
-    setSelectedDocument(doc);
-    setIsViewOpen(true);
-  };
-
-  const handleEdit = (doc: Document) => {
-    setSelectedDocument(doc);
-    setIsFormOpen(true);
-    setIsViewOpen(false);
-  };
-
-  const handleDelete = (doc: Document) => {
-    setSelectedDocument(doc);
-    setIsDeleteOpen(true);
-  };
+  const handleCreate = () => { setSelectedDocument(null); setIsFormOpen(true); };
+  const handleView = (doc: Document) => { setSelectedDocument(doc); setIsViewOpen(true); };
+  const handleEdit = (doc: Document) => { setSelectedDocument(doc); setIsFormOpen(true); setIsViewOpen(false); };
+  const handleDelete = (doc: Document) => { setSelectedDocument(doc); setIsDeleteOpen(true); };
 
   const handleDownload = async (doc: Document) => {
     if (!doc.file_url) return;
-    
     try {
-      const { data, error } = await supabase.storage
-        .from('documents')
-        .createSignedUrl(doc.file_url, 60);
-
+      const { data, error } = await supabase.storage.from('documents').createSignedUrl(doc.file_url, 60);
       if (error) throw error;
       window.open(data.signedUrl, '_blank');
-    } catch (error) {
-      console.error('Download error:', error);
-    }
+    } catch (error) { console.error('Download error:', error); }
   };
 
   const handleFormSubmit = (values: any) => {
     const { changeSummary, ...rest } = values;
-    const payload = {
-      ...rest,
-      system_id: rest.system_id || null,
-      project_id: rest.project_id || null,
-    };
-
+    const payload = { ...rest, system_id: rest.system_id || null, project_id: rest.project_id || null };
     if (selectedDocument) {
-      updateDocument.mutate(
-        { id: selectedDocument.id, changeSummary, ...payload },
-        { onSuccess: () => setIsFormOpen(false) }
-      );
+      updateDocument.mutate({ id: selectedDocument.id, changeSummary, ...payload }, { onSuccess: () => setIsFormOpen(false) });
     } else {
       createDocument.mutate(payload, { onSuccess: () => setIsFormOpen(false) });
     }
@@ -145,199 +96,100 @@ export default function Documents() {
 
   const handleConfirmDelete = () => {
     if (selectedDocument) {
-      deleteDocument.mutate(selectedDocument.id, {
-        onSuccess: () => {
-          setIsDeleteOpen(false);
-          setSelectedDocument(null);
-        },
-      });
+      deleteDocument.mutate(selectedDocument.id, { onSuccess: () => { setIsDeleteOpen(false); setSelectedDocument(null); } });
     }
   };
 
-  const typeCounts = documents.reduce((acc, doc) => {
-    acc[doc.document_type] = (acc[doc.document_type] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  const typeCounts = documents.reduce((acc, doc) => { acc[doc.document_type] = (acc[doc.document_type] || 0) + 1; return acc; }, {} as Record<string, number>);
 
   return (
     <AppLayout>
-      <PageHeader
-        title="Documentação"
-        description="Biblioteca de documentos de validação e requisitos"
-      />
+      <PageHeader title="Documentação" description="Biblioteca de documentos, requisitos, testes e procedimentos" />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList>
+        <TabsList className="flex-wrap h-auto gap-1">
           <TabsTrigger value="documents" className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            Documentos
+            <FileText className="h-4 w-4" />Documentos
           </TabsTrigger>
           <TabsTrigger value="requirements" className="flex items-center gap-2">
-            <ClipboardList className="h-4 w-4" />
-            Requisitos
+            <ClipboardList className="h-4 w-4" />Requisitos
+          </TabsTrigger>
+          <TabsTrigger value="testcases" className="flex items-center gap-2">
+            <FlaskConical className="h-4 w-4" />Casos de Teste
+          </TabsTrigger>
+          <TabsTrigger value="protocols" className="flex items-center gap-2">
+            <Shield className="h-4 w-4" />Protocolos
+          </TabsTrigger>
+          <TabsTrigger value="sops" className="flex items-center gap-2">
+            <BookOpen className="h-4 w-4" />SOPs
+          </TabsTrigger>
+          <TabsTrigger value="evidence" className="flex items-center gap-2">
+            <Paperclip className="h-4 w-4" />Evidências
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="documents" className="space-y-6">
-          {/* Action buttons */}
           <div className="flex items-center gap-2 justify-end">
-            <Button variant="outline" onClick={() => setIsTemplateDialogOpen(true)}>
-              <Wand2 className="mr-2 h-4 w-4" />
-              Gerar de Template
-            </Button>
-            <Button variant="outline" onClick={() => setIsAIDialogOpen(true)}>
-              <Sparkles className="mr-2 h-4 w-4" />
-              Gerar com IA
-            </Button>
-            <Button onClick={handleCreate}>
-              <Plus className="mr-2 h-4 w-4" />
-              Novo Documento
-            </Button>
+            <Button variant="outline" onClick={() => setIsTemplateDialogOpen(true)}><Wand2 className="mr-2 h-4 w-4" />Gerar de Template</Button>
+            <Button variant="outline" onClick={() => setIsAIDialogOpen(true)}><Sparkles className="mr-2 h-4 w-4" />Gerar com IA</Button>
+            <Button onClick={handleCreate}><Plus className="mr-2 h-4 w-4" />Novo Documento</Button>
           </div>
 
-          {/* Document Type Tabs */}
           <div className="flex flex-wrap gap-2">
-            <Badge
-              variant="outline"
-              className={`cursor-pointer ${typeFilter === "all" ? "bg-primary text-primary-foreground" : ""}`}
-              onClick={() => setTypeFilter("all")}
-            >
-              Todos ({documents.length})
-            </Badge>
+            <Badge variant="outline" className={`cursor-pointer ${typeFilter === "all" ? "bg-primary text-primary-foreground" : ""}`} onClick={() => setTypeFilter("all")}>Todos ({documents.length})</Badge>
             {(documentTypes || defaultDocumentTypes).map((type) => {
               const count = typeCounts[type.code] || 0;
               return (
-                <Badge
-                  key={type.code}
-                  variant="outline"
-                  className={`cursor-pointer ${typeFilter === type.code ? "bg-primary text-primary-foreground" : documentTypeColors[type.code]}`}
-                  onClick={() => setTypeFilter(type.code)}
-                >
+                <Badge key={type.code} variant="outline" className={`cursor-pointer ${typeFilter === type.code ? "bg-primary text-primary-foreground" : documentTypeColors[type.code]}`} onClick={() => setTypeFilter(type.code)}>
                   {type.code} ({count})
                 </Badge>
               );
             })}
           </div>
 
-          {/* Filters */}
           <Card>
             <CardContent className="p-4">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por nome ou sistema..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
+                <div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input placeholder="Buscar por nome ou sistema..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" /></div>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[160px]">
-                    <Filter className="mr-2 h-4 w-4" />
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos Status</SelectItem>
-                    <SelectItem value="draft">Rascunho</SelectItem>
-                    <SelectItem value="pending">Em Revisão</SelectItem>
-                    <SelectItem value="approved">Aprovado</SelectItem>
-                    <SelectItem value="rejected">Rejeitado</SelectItem>
-                  </SelectContent>
+                  <SelectTrigger className="w-[160px]"><Filter className="mr-2 h-4 w-4" /><SelectValue placeholder="Status" /></SelectTrigger>
+                  <SelectContent><SelectItem value="all">Todos Status</SelectItem><SelectItem value="draft">Rascunho</SelectItem><SelectItem value="pending">Em Revisão</SelectItem><SelectItem value="approved">Aprovado</SelectItem><SelectItem value="rejected">Rejeitado</SelectItem></SelectContent>
                 </Select>
               </div>
             </CardContent>
           </Card>
 
-          {/* Documents Table */}
           <Card>
             <CardContent className="p-0">
               {isLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
+                <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
               ) : filteredDocuments.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground mb-4">
-                    {documents.length === 0
-                      ? "Nenhum documento cadastrado ainda."
-                      : "Nenhum documento encontrado com os filtros aplicados."}
-                  </p>
-                  {documents.length === 0 && (
-                    <Button onClick={handleCreate}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Criar Primeiro Documento
-                    </Button>
-                  )}
+                  <p className="text-muted-foreground mb-4">{documents.length === 0 ? "Nenhum documento cadastrado ainda." : "Nenhum documento encontrado com os filtros aplicados."}</p>
+                  {documents.length === 0 && <Button onClick={handleCreate}><Plus className="mr-2 h-4 w-4" />Criar Primeiro Documento</Button>}
                 </div>
               ) : (
                 <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Documento</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Sistema</TableHead>
-                      <TableHead>Versão</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Autor</TableHead>
-                      <TableHead>Atualizado em</TableHead>
-                      <TableHead className="w-[50px]"></TableHead>
-                    </TableRow>
-                  </TableHeader>
+                  <TableHeader><TableRow><TableHead>Documento</TableHead><TableHead>Tipo</TableHead><TableHead>Sistema</TableHead><TableHead>Versão</TableHead><TableHead>Status</TableHead><TableHead>Autor</TableHead><TableHead>Atualizado em</TableHead><TableHead className="w-[50px]"></TableHead></TableRow></TableHeader>
                   <TableBody>
                     {filteredDocuments.map((doc) => (
-                      <TableRow
-                        key={doc.id}
-                        className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => handleView(doc)}
-                      >
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <FileText className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium">{doc.title}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={documentTypeColors[doc.document_type] || ""}>
-                            {doc.document_type}
-                          </Badge>
-                        </TableCell>
+                      <TableRow key={doc.id} className="cursor-pointer hover:bg-muted/50" onClick={() => handleView(doc)}>
+                        <TableCell><div className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground" /><span className="font-medium">{doc.title}</span></div></TableCell>
+                        <TableCell><Badge variant="outline" className={documentTypeColors[doc.document_type] || ""}>{doc.document_type}</Badge></TableCell>
                         <TableCell>{doc.system?.name || "-"}</TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">v{doc.version || "1.0"}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">
-                            {statusLabels[doc.status || "draft"]}
-                          </Badge>
-                        </TableCell>
+                        <TableCell><Badge variant="secondary">v{doc.version || "1.0"}</Badge></TableCell>
+                        <TableCell><Badge variant="outline">{statusLabels[doc.status || "draft"]}</Badge></TableCell>
                         <TableCell>{doc.author?.full_name || "-"}</TableCell>
-                        <TableCell>
-                          {new Date(doc.updated_at).toLocaleDateString("pt-BR")}
-                        </TableCell>
+                        <TableCell>{new Date(doc.updated_at).toLocaleDateString("pt-BR")}</TableCell>
                         <TableCell>
                           <DropdownMenu>
-                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
+                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleView(doc); }}>
-                                <Eye className="mr-2 h-4 w-4" /> Visualizar
-                              </DropdownMenuItem>
-                              {doc.file_url && (
-                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDownload(doc); }}>
-                                  <Download className="mr-2 h-4 w-4" /> Download
-                                </DropdownMenuItem>
-                              )}
-                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(doc); }}>
-                                <Edit className="mr-2 h-4 w-4" /> Editar
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(doc); }}>
-                                <Trash2 className="mr-2 h-4 w-4" /> Excluir
-                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleView(doc); }}><Eye className="mr-2 h-4 w-4" />Visualizar</DropdownMenuItem>
+                              {doc.file_url && <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDownload(doc); }}><Download className="mr-2 h-4 w-4" />Download</DropdownMenuItem>}
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(doc); }}><Edit className="mr-2 h-4 w-4" />Editar</DropdownMenuItem>
+                              <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(doc); }}><Trash2 className="mr-2 h-4 w-4" />Excluir</DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -350,58 +202,19 @@ export default function Documents() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="requirements">
-          <RequirementsTab />
-        </TabsContent>
+        <TabsContent value="requirements"><RequirementsTab /></TabsContent>
+        <TabsContent value="testcases"><TestCasesTab /></TabsContent>
+        <TabsContent value="protocols"><ProtocolsTab onView={handleView} onEdit={handleEdit} onDelete={handleDelete} onCreate={handleCreate} /></TabsContent>
+        <TabsContent value="sops"><SOPsTab onView={handleView} onEdit={handleEdit} onDelete={handleDelete} onCreate={handleCreate} /></TabsContent>
+        <TabsContent value="evidence"><TestEvidenceTab /></TabsContent>
       </Tabs>
 
       {/* Dialogs */}
-      <DocumentFormDialog
-        open={isFormOpen}
-        onOpenChange={(open) => {
-          setIsFormOpen(open);
-          if (!open) setAiGeneratedContent(null);
-        }}
-        document={selectedDocument}
-        onSubmit={handleFormSubmit}
-        isLoading={createDocument.isPending || updateDocument.isPending}
-        initialContent={aiGeneratedContent}
-      />
-
-      <DocumentViewDialog
-        open={isViewOpen}
-        onOpenChange={setIsViewOpen}
-        document={selectedDocument}
-        onEdit={() => selectedDocument && handleEdit(selectedDocument)}
-      />
-
-      <DeleteDocumentDialog
-        open={isDeleteOpen}
-        onOpenChange={setIsDeleteOpen}
-        documentTitle={selectedDocument?.title || ""}
-        onConfirm={handleConfirmDelete}
-        isLoading={deleteDocument.isPending}
-      />
-
-      <AIDocumentDialog
-        open={isAIDialogOpen}
-        onOpenChange={setIsAIDialogOpen}
-        onUseContent={(content, type) => {
-          setAiGeneratedContent({ content, type });
-          setSelectedDocument(null);
-          setIsFormOpen(true);
-        }}
-      />
-
-      <GenerateFromTemplateDialog
-        open={isTemplateDialogOpen}
-        onOpenChange={setIsTemplateDialogOpen}
-        onGenerate={(data) => {
-          setAiGeneratedContent({ content: data.content, type: data.type });
-          setSelectedDocument(null);
-          setIsFormOpen(true);
-        }}
-      />
+      <DocumentFormDialog open={isFormOpen} onOpenChange={(open) => { setIsFormOpen(open); if (!open) setAiGeneratedContent(null); }} document={selectedDocument} onSubmit={handleFormSubmit} isLoading={createDocument.isPending || updateDocument.isPending} initialContent={aiGeneratedContent} />
+      <DocumentViewDialog open={isViewOpen} onOpenChange={setIsViewOpen} document={selectedDocument} onEdit={() => selectedDocument && handleEdit(selectedDocument)} />
+      <DeleteDocumentDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen} documentTitle={selectedDocument?.title || ""} onConfirm={handleConfirmDelete} isLoading={deleteDocument.isPending} />
+      <AIDocumentDialog open={isAIDialogOpen} onOpenChange={setIsAIDialogOpen} onUseContent={(content, type) => { setAiGeneratedContent({ content, type }); setSelectedDocument(null); setIsFormOpen(true); }} />
+      <GenerateFromTemplateDialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen} onGenerate={(data) => { setAiGeneratedContent({ content: data.content, type: data.type }); setSelectedDocument(null); setIsFormOpen(true); }} />
     </AppLayout>
   );
 }
