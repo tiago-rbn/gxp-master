@@ -13,7 +13,8 @@ import { GampBadge } from "@/components/shared/GampBadge";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertTriangle, CheckCircle, ShieldAlert, ExternalLink } from "lucide-react";
+import { AlertTriangle, CheckCircle, ShieldAlert, ExternalLink, History } from "lucide-react";
+import { SystemVersionHistoryTab } from "@/components/systems/SystemVersionHistoryTab";
 import { useSystemIRA, calculateRiskScore, getRiskScoreColor, getRiskScoreLevel } from "@/hooks/useSystemIRA";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -110,13 +111,17 @@ export function SystemViewDialog({
         </DialogHeader>
 
         <Tabs defaultValue="details" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="details">Informações</TabsTrigger>
             <TabsTrigger value="ira">
-              Avaliação de Risco Inicial (IRA)
+              IRA
               {!ira && !isLoadingIRA && (
                 <AlertTriangle className="ml-2 h-4 w-4 text-warning" />
               )}
+            </TabsTrigger>
+            <TabsTrigger value="versions">
+              <History className="mr-1 h-4 w-4" />
+              Versões
             </TabsTrigger>
           </TabsList>
 
@@ -291,6 +296,10 @@ export function SystemViewDialog({
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          <TabsContent value="versions" className="mt-4">
+            <SystemVersionHistoryTab systemId={system.id} />
           </TabsContent>
         </Tabs>
 

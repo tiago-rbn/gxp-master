@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, Trash2, Loader2, Upload, AlertTriangle, CheckCircle, ShieldAlert, FileDown } from "lucide-react";
+import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, Trash2, Loader2, Upload, AlertTriangle, CheckCircle, ShieldAlert, FileDown, RefreshCw } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { GampBadge } from "@/components/shared/GampBadge";
@@ -40,6 +40,7 @@ import { SystemFormDialog } from "@/components/systems/SystemFormDialog";
 import { SystemViewDialog } from "@/components/systems/SystemViewDialog";
 import { DeleteSystemDialog } from "@/components/systems/DeleteSystemDialog";
 import { ImportSystemsDialog, ParsedSystem } from "@/components/systems/ImportSystemsDialog";
+import { SystemVersionChangeDialog } from "@/components/systems/SystemVersionChangeDialog";
 import type { Database } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import { exportSystemsInventoryToPDF } from "@/lib/pdfExport";
@@ -102,6 +103,7 @@ export default function Systems() {
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isVersionChangeOpen, setIsVersionChangeOpen] = useState(false);
   const [selectedSystem, setSelectedSystem] = useState<System | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const navigate = useNavigate();
@@ -152,6 +154,22 @@ export default function Systems() {
   const handleDelete = (system: System) => {
     setSelectedSystem(system);
     setIsDeleteOpen(true);
+  };
+
+  const handleVersionChange = (system: System) => {
+    setSelectedSystem(system);
+    setIsVersionChangeOpen(true);
+  };
+
+  const handleVersionCreateChangeRequest = (systemId: string) => {
+    navigate(`/changes?createNew=true&systemId=${systemId}`);
+  };
+
+  const handleVersionReviewIRA = (systemId: string) => {
+    const sys = systemsData.find(s => s.id === systemId);
+    if (sys) {
+      navigate(`/risks?createIRA=true&systemId=${systemId}&systemName=${encodeURIComponent(sys.name)}`);
+    }
   };
 
   const handleFormSubmit = (values: any) => {
@@ -428,6 +446,15 @@ export default function Systems() {
                             <DropdownMenuItem
                               onClick={(e) => {
                                 e.stopPropagation();
+                                handleVersionChange(system as System);
+                              }}
+                            >
+                              <RefreshCw className="mr-2 h-4 w-4" />
+                              Alterar Versão
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 handleEdit(system as System);
                               }}
                             >
@@ -485,6 +512,14 @@ export default function Systems() {
         onOpenChange={setIsImportOpen}
         onImport={handleImport}
         isLoading={isImporting}
+      />
+
+      <SystemVersionChangeDialog
+        open={isVersionChangeOpen}
+        onOpenChange={setIsVersionChangeOpen}
+        system={selectedSystem ? { id: selectedSystem.id, name: selectedSystem.name, version: selectedSystem.version } : null}
+        onCreateChangeRequest={handleVersionCreateChangeRequest}
+        onReviewIRA={handleVersionReviewIRA}
       />
     </AppLayout>
   );
