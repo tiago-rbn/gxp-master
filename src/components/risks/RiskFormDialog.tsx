@@ -82,6 +82,7 @@ const riskSchema = z.object({
   approver_id: z.string().optional(),
   reviewer_id: z.string().optional(),
   tags: z.array(z.string()).optional(),
+  change_summary: z.string().optional(),
 });
 
 type RiskFormValues = z.infer<typeof riskSchema>;
@@ -260,7 +261,15 @@ export function RiskFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{risk ? "Editar Avaliação de Risco" : "Nova Avaliação de Risco"}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            {risk ? "Editar Avaliação de Risco" : "Nova Avaliação de Risco"}
+            {risk && (risk as any).code && (
+              <Badge variant="outline" className="font-mono text-xs">{(risk as any).code}</Badge>
+            )}
+            {risk && (
+              <Badge variant="secondary" className="text-xs">v{(risk as any).version || "1.0"}</Badge>
+            )}
+          </DialogTitle>
           <DialogDescription>
             {risk
               ? "Atualize as informações da avaliação de risco"
@@ -695,6 +704,26 @@ export function RiskFormDialog({
                 </div>
               )}
             </div>
+
+            {/* Change Summary (only when editing) */}
+            {risk && (
+              <FormField
+                control={form.control}
+                name="change_summary"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Resumo da Alteração *</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Descreva o que foi alterado nesta versão..."
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
