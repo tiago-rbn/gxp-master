@@ -1119,6 +1119,7 @@ export type Database = {
           description: string | null
           gamp_category: Database["public"]["Enums"]["gamp_category"]
           gxp_impact: boolean | null
+          has_interfaces: boolean | null
           id: string
           installation_location: string | null
           last_validation_date: string | null
@@ -1128,6 +1129,7 @@ export type Database = {
           responsible_id: string | null
           system_owner_id: string | null
           updated_at: string
+          usage_status: string | null
           validation_status:
             | Database["public"]["Enums"]["validation_status"]
             | null
@@ -1143,6 +1145,7 @@ export type Database = {
           description?: string | null
           gamp_category: Database["public"]["Enums"]["gamp_category"]
           gxp_impact?: boolean | null
+          has_interfaces?: boolean | null
           id?: string
           installation_location?: string | null
           last_validation_date?: string | null
@@ -1152,6 +1155,7 @@ export type Database = {
           responsible_id?: string | null
           system_owner_id?: string | null
           updated_at?: string
+          usage_status?: string | null
           validation_status?:
             | Database["public"]["Enums"]["validation_status"]
             | null
@@ -1167,6 +1171,7 @@ export type Database = {
           description?: string | null
           gamp_category?: Database["public"]["Enums"]["gamp_category"]
           gxp_impact?: boolean | null
+          has_interfaces?: boolean | null
           id?: string
           installation_location?: string | null
           last_validation_date?: string | null
@@ -1176,6 +1181,7 @@ export type Database = {
           responsible_id?: string | null
           system_owner_id?: string | null
           updated_at?: string
+          usage_status?: string | null
           validation_status?:
             | Database["public"]["Enums"]["validation_status"]
             | null

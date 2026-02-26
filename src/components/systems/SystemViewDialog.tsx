@@ -58,6 +58,12 @@ const installationLabels: Record<string, string> = {
   hybrid: "Híbrido",
 };
 
+const usageStatusLabels: Record<string, { label: string; className: string }> = {
+  deploying: { label: "Em Implantação", className: "border-warning/20 bg-warning/10 text-warning" },
+  in_use: { label: "Em Uso", className: "border-success/20 bg-success/10 text-success" },
+  retired: { label: "Aposentado", className: "border-muted-foreground/20 bg-muted text-muted-foreground" },
+};
+
 const riskLevelLabels: Record<string, { label: string; className: string }> = {
   low: { label: "Baixo", className: "border-success/20 bg-success/10 text-success" },
   medium: { label: "Médio", className: "border-warning/20 bg-warning/10 text-warning" },
@@ -152,6 +158,18 @@ export function SystemViewDialog({
                   <p className="font-medium">
                     {installationLabels[system.installation_location || "on_premise"]}
                   </p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Status de Uso</Label>
+                  <div className="mt-1">
+                    <Badge variant="outline" className={usageStatusLabels[(system as any).usage_status || "in_use"].className}>
+                      {usageStatusLabels[(system as any).usage_status || "in_use"].label}
+                    </Badge>
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Interface com Outros Sistemas</Label>
+                  <p className="font-medium">{(system as any).has_interfaces ? "Sim" : "Não"}</p>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Status de Validação</Label>
