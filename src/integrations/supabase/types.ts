@@ -870,12 +870,94 @@ export type Database = {
           },
         ]
       }
+      risk_assessment_versions: {
+        Row: {
+          assessment_type: string
+          change_summary: string | null
+          changed_by: string | null
+          company_id: string
+          controls: string | null
+          created_at: string
+          description: string | null
+          detectability: number | null
+          id: string
+          probability: number | null
+          residual_risk: string | null
+          risk_assessment_id: string
+          risk_level: string | null
+          severity: number | null
+          status: string | null
+          system_id: string | null
+          tags: string[] | null
+          title: string
+          version: string
+        }
+        Insert: {
+          assessment_type: string
+          change_summary?: string | null
+          changed_by?: string | null
+          company_id: string
+          controls?: string | null
+          created_at?: string
+          description?: string | null
+          detectability?: number | null
+          id?: string
+          probability?: number | null
+          residual_risk?: string | null
+          risk_assessment_id: string
+          risk_level?: string | null
+          severity?: number | null
+          status?: string | null
+          system_id?: string | null
+          tags?: string[] | null
+          title: string
+          version: string
+        }
+        Update: {
+          assessment_type?: string
+          change_summary?: string | null
+          changed_by?: string | null
+          company_id?: string
+          controls?: string | null
+          created_at?: string
+          description?: string | null
+          detectability?: number | null
+          id?: string
+          probability?: number | null
+          residual_risk?: string | null
+          risk_assessment_id?: string
+          risk_level?: string | null
+          severity?: number | null
+          status?: string | null
+          system_id?: string | null
+          tags?: string[] | null
+          title?: string
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_assessment_versions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_assessment_versions_risk_assessment_id_fkey"
+            columns: ["risk_assessment_id"]
+            isOneToOne: false
+            referencedRelation: "risk_assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       risk_assessments: {
         Row: {
           approved_at: string | null
           approver_id: string | null
           assessment_type: string
           assessor_id: string | null
+          code: string | null
           company_id: string
           controls: string | null
           created_at: string
@@ -894,12 +976,14 @@ export type Database = {
           tags: string[] | null
           title: string
           updated_at: string
+          version: string
         }
         Insert: {
           approved_at?: string | null
           approver_id?: string | null
           assessment_type: string
           assessor_id?: string | null
+          code?: string | null
           company_id: string
           controls?: string | null
           created_at?: string
@@ -918,12 +1002,14 @@ export type Database = {
           tags?: string[] | null
           title: string
           updated_at?: string
+          version?: string
         }
         Update: {
           approved_at?: string | null
           approver_id?: string | null
           assessment_type?: string
           assessor_id?: string | null
+          code?: string | null
           company_id?: string
           controls?: string | null
           created_at?: string
@@ -942,6 +1028,7 @@ export type Database = {
           tags?: string[] | null
           title?: string
           updated_at?: string
+          version?: string
         }
         Relationships: [
           {
@@ -1882,6 +1969,10 @@ export type Database = {
       add_user_to_company: {
         Args: { _company_id: string; _set_primary?: boolean; _user_id: string }
         Returns: boolean
+      }
+      generate_risk_code: {
+        Args: { _company_id: string; _risk_level: string; _system_id: string }
+        Returns: string
       }
       get_invitation_by_token: {
         Args: { _token: string }
