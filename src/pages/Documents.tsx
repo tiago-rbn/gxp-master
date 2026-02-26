@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Plus, Search, Filter, FileText, Eye, Download, Edit, Trash2, MoreHorizontal, Loader2, Sparkles, Wand2, ClipboardList, FlaskConical, Shield, BookOpen, Paperclip } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Plus, Search, Filter, FileText, Eye, Download, Edit, Trash2, MoreHorizontal, Loader2, Sparkles, Wand2, ClipboardList, FlaskConical, Shield, BookOpen, Paperclip, FolderOpen, FolderClosed, ChevronRight, ChevronDown } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,6 +35,7 @@ type Document = Database["public"]["Tables"]["documents"]["Row"] & {
   system?: { name: string } | null;
   author?: { full_name: string } | null;
   approver?: { full_name: string } | null;
+  project?: { id: string; name: string } | null;
 };
 
 const statusLabels: Record<string, string> = {
@@ -46,6 +47,7 @@ export default function Documents() {
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set(["__no_project__"]));
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
@@ -101,6 +103,48 @@ export default function Documents() {
   };
 
   const typeCounts = documents.reduce((acc, doc) => { acc[doc.document_type] = (acc[doc.document_type] || 0) + 1; return acc; }, {} as Record<string, number>);
+
+  const groupedByProject = useMemo(() => {
+    const groups: { projectId: string; projectName: string; docs: Document[] }[] = [];
+    const projectMap = new Map<string, Document[]>();
+    
+    filteredDocuments.forEach((doc) => {
+      const key = doc.project_id || "__no_project__";
+      if (!projectMap.has(key)) projectMap.set(key, []);
+      projectMap.get(key)!.push(doc);
+    });
+
+    // Projects with docs first, then "sem projeto"
+    const sorted = Array.from(projectMap.entries()).sort(([a], [b]) => {
+      if (a === "__no_project__") return 1;
+      if (b === "__no_project__") return -1;
+      return 0;
+    });
+
+    sorted.forEach(([key, docs]) => {
+      const projectName = key === "__no_project__" ? "Sem Projeto" : (docs[0]?.project as any)?.name || "Projeto Desconhecido";
+      groups.push({ projectId: key, projectName, docs });
+    });
+
+    return groups;
+  }, [filteredDocuments]);
+
+  const toggleProject = (projectId: string) => {
+    setExpandedProjects((prev) => {
+      const next = new Set(prev);
+      if (next.has(projectId)) next.delete(projectId);
+      else next.add(projectId);
+      return next;
+    });
+  };
+
+  const expandAll = () => {
+    setExpandedProjects(new Set(groupedByProject.map(g => g.projectId)));
+  };
+
+  const collapseAll = () => {
+    setExpandedProjects(new Set());
+  };
 
   return (
     <AppLayout>
@@ -159,47 +203,89 @@ export default function Documents() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-0">
-              {isLoading ? (
-                <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
-              ) : filteredDocuments.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">{groupedByProject.length} pasta(s) · {filteredDocuments.length} documento(s)</p>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm" onClick={expandAll}>Expandir Tudo</Button>
+              <Button variant="ghost" size="sm" onClick={collapseAll}>Recolher Tudo</Button>
+            </div>
+          </div>
+
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+          ) : filteredDocuments.length === 0 ? (
+            <Card>
+              <CardContent className="py-12">
+                <div className="flex flex-col items-center justify-center text-center">
                   <FileText className="h-12 w-12 text-muted-foreground mb-4" />
                   <p className="text-muted-foreground mb-4">{documents.length === 0 ? "Nenhum documento cadastrado ainda." : "Nenhum documento encontrado com os filtros aplicados."}</p>
                   {documents.length === 0 && <Button onClick={handleCreate}><Plus className="mr-2 h-4 w-4" />Criar Primeiro Documento</Button>}
                 </div>
-              ) : (
-                <Table>
-                  <TableHeader><TableRow><TableHead>Documento</TableHead><TableHead>Tipo</TableHead><TableHead>Sistema</TableHead><TableHead>Versão</TableHead><TableHead>Status</TableHead><TableHead>Autor</TableHead><TableHead>Atualizado em</TableHead><TableHead className="w-[50px]"></TableHead></TableRow></TableHeader>
-                  <TableBody>
-                    {filteredDocuments.map((doc) => (
-                      <TableRow key={doc.id} className="cursor-pointer hover:bg-muted/50" onClick={() => handleView(doc)}>
-                        <TableCell><div className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground" /><span className="font-medium">{doc.title}</span></div></TableCell>
-                        <TableCell><Badge variant="outline" className={documentTypeColors[doc.document_type] || ""}>{doc.document_type}</Badge></TableCell>
-                        <TableCell>{doc.system?.name || "-"}</TableCell>
-                        <TableCell><Badge variant="secondary">v{doc.version || "1.0"}</Badge></TableCell>
-                        <TableCell><Badge variant="outline">{statusLabels[doc.status || "draft"]}</Badge></TableCell>
-                        <TableCell>{doc.author?.full_name || "-"}</TableCell>
-                        <TableCell>{new Date(doc.updated_at).toLocaleDateString("pt-BR")}</TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleView(doc); }}><Eye className="mr-2 h-4 w-4" />Visualizar</DropdownMenuItem>
-                              {doc.file_url && <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDownload(doc); }}><Download className="mr-2 h-4 w-4" />Download</DropdownMenuItem>}
-                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(doc); }}><Edit className="mr-2 h-4 w-4" />Editar</DropdownMenuItem>
-                              <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(doc); }}><Trash2 className="mr-2 h-4 w-4" />Excluir</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {groupedByProject.map(({ projectId, projectName, docs }) => {
+                const isExpanded = expandedProjects.has(projectId);
+                const isNoProject = projectId === "__no_project__";
+                return (
+                  <Card key={projectId}>
+                    <div
+                      className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => toggleProject(projectId)}
+                    >
+                      {isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                      {isExpanded ? <FolderOpen className="h-5 w-5 text-primary" /> : <FolderClosed className="h-5 w-5 text-muted-foreground" />}
+                      <span className={`font-medium ${isNoProject ? "text-muted-foreground italic" : ""}`}>{projectName}</span>
+                      <Badge variant="secondary" className="ml-auto">{docs.length}</Badge>
+                    </div>
+                    {isExpanded && (
+                      <CardContent className="p-0 border-t">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Documento</TableHead>
+                              <TableHead>Tipo</TableHead>
+                              <TableHead>Sistema</TableHead>
+                              <TableHead>Versão</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Autor</TableHead>
+                              <TableHead>Atualizado em</TableHead>
+                              <TableHead className="w-[50px]"></TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {docs.map((doc) => (
+                              <TableRow key={doc.id} className="cursor-pointer hover:bg-muted/50" onClick={() => handleView(doc)}>
+                                <TableCell><div className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground" /><span className="font-medium">{doc.title}</span></div></TableCell>
+                                <TableCell><Badge variant="outline" className={documentTypeColors[doc.document_type] || ""}>{doc.document_type}</Badge></TableCell>
+                                <TableCell>{doc.system?.name || "-"}</TableCell>
+                                <TableCell><Badge variant="secondary">v{doc.version || "1.0"}</Badge></TableCell>
+                                <TableCell><Badge variant="outline">{statusLabels[doc.status || "draft"]}</Badge></TableCell>
+                                <TableCell>{doc.author?.full_name || "-"}</TableCell>
+                                <TableCell>{new Date(doc.updated_at).toLocaleDateString("pt-BR")}</TableCell>
+                                <TableCell>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleView(doc); }}><Eye className="mr-2 h-4 w-4" />Visualizar</DropdownMenuItem>
+                                      {doc.file_url && <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDownload(doc); }}><Download className="mr-2 h-4 w-4" />Download</DropdownMenuItem>}
+                                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(doc); }}><Edit className="mr-2 h-4 w-4" />Editar</DropdownMenuItem>
+                                      <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(doc); }}><Trash2 className="mr-2 h-4 w-4" />Excluir</DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </CardContent>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="requirements"><RequirementsTab /></TabsContent>
