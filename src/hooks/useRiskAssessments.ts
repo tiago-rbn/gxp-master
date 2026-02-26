@@ -19,6 +19,7 @@ export function useRiskAssessments() {
         .from("risk_assessments")
         .select(`
           *,
+          questionnaire_responses,
           system:systems(name),
           assessor:profiles!risk_assessments_assessor_id_fkey(full_name),
           approver:profiles!risk_assessments_approver_id_fkey(full_name),
